@@ -59,7 +59,7 @@
       <div class="nav-group">
         <button class="nav-item active" data-tab="page-downgrader">
           <span class="material-icons-round">history</span>
-          <span class="nav-label">Downgrader & Versions</span>
+          <span class="nav-label">Version Manager</span>
           <span class="nav-badge" id="badge-active-ver">Target</span>
         </button>
 
@@ -97,54 +97,33 @@
     <!-- Content Pages -->
     <main id="main">
 
-      <!-- PAGE 1: DOWNGRADER & VERSIONS -->
+      <!-- PAGE 1: VERSION SELECTOR & LAUNCHER -->
       <section class="page active" id="page-downgrader">
-        <!-- Hero 1-Click Downgrade Banner -->
-        <div class="hero-banner">
-          <span class="hero-tag">TIREX DOWNDRIVE ENGINE</span>
-          <h1 class="hero-h1">Roblox Version Downgrader & Selector</h1>
-          <p class="hero-sub">Bypass version mismatch, downgrade to the ideal working Roblox build in 1-click, and spawn multiple instances simultaneously.</p>
-
-          <div class="compare-strip">
-            <div class="compare-box">
-              <div class="compare-box-label">CURRENT LIVE ROBLOX</div>
-              <div class="compare-box-val" id="current-live-ver">Checking...</div>
-              <div class="compare-box-sub" id="current-live-hash"></div>
-            </div>
-
-            <div class="compare-arrow">
-              <span class="material-icons-round">east</span>
-            </div>
-
-            <div class="compare-box active-choice">
-              <div class="compare-box-label">RECOMMENDED STABLE BUILD</div>
-              <div class="compare-box-val" id="recommended-ver">version-e380c8edc8f6477c</div>
-              <div class="compare-box-sub">TiRex Tested • Working Downgrade</div>
-            </div>
+        <div class="ph">
+          <div>
+            <h2 class="ph-title">Roblox Version Manager</h2>
+            <p class="ph-desc">Select, download, or launch any Roblox client build with automatic multi-instance support.</p>
           </div>
-
-          <div class="hero-toolbar">
-            <button class="btn btn-primary" id="btn-downgrade-launch">
+          <div class="ph-actions">
+            <button class="btn btn-primary" id="btn-quick-launch">
               <span class="material-icons-round">play_arrow</span>
-              <span>1-Click Downgrade & Launch</span>
+              <span>Launch Active Build</span>
             </button>
-
             <button class="btn btn-ghost" id="btn-launch-more">
               <span class="material-icons-round">add</span>
-              <span>Launch More Instances</span>
+              <span>Launch Another</span>
             </button>
-
-            <div class="input-box" style="flex: 1; min-width: 220px;">
-              <span class="material-icons-round">sports_esports</span>
-              <input type="text" id="quick-place-id" placeholder="Target Place ID or Game URL (optional)">
-            </div>
           </div>
         </div>
 
-        <!-- Custom Version Hash Input Card -->
+        <!-- Quick Launch Target & Custom Version Hash -->
         <div class="card">
-          <div style="display: flex; gap: 10px; align-items: center;">
-            <div class="input-box" style="flex: 1;">
+          <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+            <div class="input-box" style="flex: 1; min-width: 240px;">
+              <span class="material-icons-round">sports_esports</span>
+              <input type="text" id="quick-place-id" placeholder="Target Place ID or Game URL (optional)...">
+            </div>
+            <div class="input-box" style="flex: 1; min-width: 240px;">
               <span class="material-icons-round">tag</span>
               <input type="text" id="custom-hash-input" placeholder="Paste custom version hash (e.g. version-e380c8edc8f6477c)...">
             </div>

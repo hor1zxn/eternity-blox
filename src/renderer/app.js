@@ -8,8 +8,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     accounts: [],
     runningPids: [],
     liveInfo: {},
-    activeVersion: '',
-    recommendedVersion: 'version-e380c8edc8f6477c'
+    activeVersion: ''
   };
 
   // Window Controls
@@ -47,10 +46,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const badgePidsCount = document.getElementById('badge-pids-count');
   const activePidsBadge = document.getElementById('active-pids-badge');
 
-  // Downgrader Elements
-  const currentLiveVer = document.getElementById('current-live-ver');
-  const currentLiveHash = document.getElementById('current-live-hash');
-  const recommendedVer = document.getElementById('recommended-ver');
+  // Version Manager Elements
+  const btnQuickLaunch = document.getElementById('btn-quick-launch');
   const btnDowngradeLaunch = document.getElementById('btn-downgrade-launch');
   const btnLaunchMore = document.getElementById('btn-launch-more');
   const quickPlaceId = document.getElementById('quick-place-id');
@@ -250,7 +247,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       if (currentLiveVer) currentLiveVer.textContent = live.liveClientVersion || '0.737.x';
       if (currentLiveHash) currentLiveHash.textContent = live.liveHash || 'version-e7d81637d42c4b23';
-      log(`Live Roblox: ${live.liveClientVersion || 'Online'} | Recommended Downgrade: ${state.recommendedVersion}`);
+      log(`Live Roblox: ${live.liveClientVersion || 'Online'} (${live.liveHash || ''})`);
     } catch (err) {
       log(`Failed to fetch live version info: ${err.message}`, 'err');
     }
@@ -345,29 +342,28 @@ document.addEventListener('DOMContentLoaded', async () => {
     log('Download cancelled by user.', 'err');
   });
 
-  // 1-Click Downgrade & Launch Button
-  btnDowngradeLaunch?.addEventListener('click', async () => {
-    const targetHash = state.recommendedVersion || 'version-e380c8edc8f6477c';
-    const isInstalled = state.installedVersions.some(v => v.hash === targetHash);
-
-    if (!isInstalled) {
-      log(`Recommended build (${targetHash}) not installed. Starting 1-click download...`);
-      try {
-        await window.downloadBuild(targetHash);
-      } catch {
-        return;
-      }
+  // Launch Active Build Button
+  btnQuickLaunch?.addEventListener('click', async () => {
+    let targetHash = state.activeVersion;
+    if (!targetHash && state.installedVersions.length > 0) {
+      targetHash = state.installedVersions[0].hash;
+      state.activeVersion = targetHash;
+      window.api.saveSettings({ activeVersion: targetHash });
+      updateActiveVersionDisplay();
+      renderInstalledVersions();
     }
 
-    state.activeVersion = targetHash;
-    window.api.saveSettings({ activeVersion: targetHash });
-    updateActiveVersionDisplay();
+    if (!targetHash) {
+      log('No Roblox build selected. Please install or select a build below.', 'err');
+      alert('No active Roblox build selected. Please install or choose a version from the installed list or catalog below.');
+      return;
+    }
 
     const target = (quickPlaceId?.value || globalGameTarget?.value || '').trim();
-    log(`Spawning downgraded Roblox instance (${targetHash})...`);
+    log(`Spawning active Roblox build (${targetHash})...`);
     try {
       const res = await window.api.launchInstance({ versionHash: targetHash, target });
-      log(`Launched downgraded Roblox (PID: ${res.pid})!`, 'ok');
+      log(`Launched Roblox (PID: ${res.pid}) with build ${res.version}!`, 'ok');
     } catch (err) {
       log(`Launch failed: ${err.message}`, 'err');
     }
@@ -375,10 +371,19 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Launch More Instances Button
   btnLaunchMore?.addEventListener('click', async () => {
+    let targetHash = state.activeVersion;
+    if (!targetHash && state.installedVersions.length > 0) {
+      targetHash = state.installedVersions[0].hash;
+      state.activeVersion = targetHash;
+      window.api.saveSettings({ activeVersion: targetHash });
+      updateActiveVersionDisplay();
+      renderInstalledVersions();
+    }
+
     const target = (quickPlaceId?.value || globalGameTarget?.value || '').trim();
     log('Spawning additional Roblox instance...');
     try {
-      const res = await window.api.launchMultiple({ count: 1, versionHash: state.activeVersion, target });
+      const res = await window.api.launchMultiple({ count: 1, versionHash: targetHash, target });
       if (res && res[0] && res[0].success) {
         log(`Spawned instance (PID: ${res[0].pid})!`, 'ok');
       }
