@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MultiBlox</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- Titlebar -->
+  <div id="titlebar">
+    <div class="tb-brand">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="#ffffff" stroke-width="2.5">
+          <polygon points="12 2 2 7 12 12 22 7 12 2" />
+          <polyline points="2 17 12 22 22 17" />
+          <polyline points="2 12 12 17 22 12" />
+        </svg>
+      </div>
+      <div class="tb-name">MULTI<span>BLOX</span></div>
+    </div>
+
+    <div class="tb-drag-center">
+      <div class="tb-pill live" id="mutex-pill">
+        <span class="tb-dot"></span>
+        <span id="mutex-label">Multi-Instance Active</span>
+      </div>
+      <div class="tb-pill" id="instances-pill">
+        <span class="material-icons-round" style="font-size:13px">layers</span>
+        <span id="instance-count-label">0 Running</span>
+      </div>
+      <div class="tb-pill" id="active-ver-pill">
+        <span class="material-icons-round" style="font-size:13px">tune</span>
+        <span id="header-active-ver">Default</span>
+      </div>
+    </div>
+
+    <div class="tb-controls">
+      <button class="tb-btn" id="btn-minimize" title="Minimize">
+        <span class="material-icons-round">remove</span>
+      </button>
+      <button class="tb-btn" id="btn-maximize" title="Maximize">
+        <span class="material-icons-round">crop_square</span>
+      </button>
+      <button class="tb-btn close" id="btn-close" title="Close">
+        <span class="material-icons-round">close</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Layout -->
+  <div id="layout">
+    <!-- Sidebar -->
+    <nav id="sidebar">
+      <div class="nav-group">
+        <button class="nav-item active" data-tab="page-downgrader">
+          <span class="material-icons-round">history</span>
+          <span class="nav-label">Downgrader & Versions</span>
+          <span class="nav-badge" id="badge-active-ver">Target</span>
+        </button>
+
+        <button class="nav-item" data-tab="page-accounts">
+          <span class="material-icons-round">people</span>
+          <span class="nav-label">Accounts</span>
+          <span class="nav-badge" id="badge-account-count">0</span>
+        </button>
+
+        <button class="nav-item" data-tab="page-mixer">
+          <span class="material-icons-round">tune</span>
+          <span class="nav-label">Mixer & Anti-AFK</span>
+          <span class="nav-badge" id="badge-pids-count">0</span>
+        </button>
+
+        <button class="nav-item" data-tab="page-settings">
+          <span class="material-icons-round">settings</span>
+          <span class="nav-label">Settings & Logs</span>
+        </button>
+
+        <button class="nav-item nav-danger" id="nav-kill-all">
+          <span class="material-icons-round">power_settings_new</span>
+          <span class="nav-label">Kill All Instances</span>
+        </button>
+      </div>
+
+      <div class="sb-bottom">
+        <div class="sb-widget">
+          <div class="sb-widget-label">TARGET ROBLOX BUILD</div>
+          <div class="sb-widget-value" id="sidebar-active-version">Detecting...</div>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Content Pages -->
+    <main id="main">
+
+      <!-- PAGE 1: DOWNGRADER & VERSIONS -->
+      <section class="page active" id="page-downgrader">
+        <!-- Hero 1-Click Downgrade Banner -->
+        <div class="hero-banner">
+          <span class="hero-tag">TIREX DOWNDRIVE ENGINE</span>
+          <h1 class="hero-h1">Roblox Version Downgrader & Selector</h1>
+          <p class="hero-sub">Bypass version mismatch, downgrade to the ideal working Roblox build in 1-click, and spawn multiple instances simultaneously.</p>
+
+          <div class="compare-strip">
+            <div class="compare-box">
+              <div class="compare-box-label">CURRENT LIVE ROBLOX</div>
+              <div class="compare-box-val" id="current-live-ver">Checking...</div>
+              <div class="compare-box-sub" id="current-live-hash"></div>
+            </div>
+
+            <div class="compare-arrow">
+              <span class="material-icons-round">east</span>
+            </div>
+
+            <div class="compare-box active-choice">
+              <div class="compare-box-label">RECOMMENDED STABLE BUILD</div>
+              <div class="compare-box-val" id="recommended-ver">version-e380c8edc8f6477c</div>
+              <div class="compare-box-sub">TiRex Tested • Working Downgrade</div>
+            </div>
+          </div>
+
+          <div class="hero-toolbar">
+            <button class="btn btn-primary" id="btn-downgrade-launch">
+              <span class="material-icons-round">play_arrow</span>
+              <span>1-Click Downgrade & Launch</span>
+            </button>
+
+            <button class="btn btn-ghost" id="btn-launch-more">
+              <span class="material-icons-round">add</span>
+              <span>Launch More Instances</span>
+            </button>
+
+            <div class="input-box" style="flex: 1; min-width: 220px;">
+              <span class="material-icons-round">sports_esports</span>
+              <input type="text" id="quick-place-id" placeholder="Target Place ID or Game URL (optional)">
+            </div>
+          </div>
+        </div>
+
+        <!-- Custom Version Hash Input Card -->
+        <div class="card">
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <div class="input-box" style="flex: 1;">
+              <span class="material-icons-round">tag</span>
+              <input type="text" id="custom-hash-input" placeholder="Paste custom version hash (e.g. version-e380c8edc8f6477c)...">
+            </div>
+            <button class="btn btn-primary" id="btn-install-custom">
+              <span class="material-icons-round">download</span>
+              <span>Install & Set Active</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Installed Versions Section -->
+        <div class="card">
+          <div class="ph" style="margin-bottom: 8px;">
+            <div>
+              <h3 class="ph-title" style="font-size: 16px;">Installed Builds On Your Machine</h3>
+              <p class="ph-desc">Stored in %LOCALAPPDATA%\Roblox\Versions. Click any version to set it active or launch it directly.</p>
+            </div>
+            <button class="btn btn-ghost btn-sm" id="btn-refresh-installed">
+              <span class="material-icons-round">refresh</span>
+              <span>Refresh</span>
+            </button>
+          </div>
+
+          <div class="installed-grid" id="installed-versions-container">
+            <div class="empty-state">Scanning local builds...</div>
+          </div>
+        </div>
+
+        <!-- Official Release Catalog -->
+        <div class="card">
+          <div class="ph" style="margin-bottom: 12px;">
+            <div>
+              <h3 class="ph-title" style="font-size: 16px;">Official Roblox Release Catalog</h3>
+              <p class="ph-desc">Browse through 370+ official deployments. Select any past build to install and run.</p>
+            </div>
+            <div class="input-box" style="width: 260px;">
+              <span class="material-icons-round">search</span>
+              <input type="text" id="catalog-search" placeholder="Search releases (e.g. 0.736)...">
+            </div>
+          </div>
+
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Client Version</th>
+                  <th>Version Hash</th>
+                  <th>Status</th>
+                  <th style="text-align: right;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="catalog-table-body">
+                <tr>
+                  <td colspan="4" style="text-align: center; padding: 24px;">Loading release catalog...</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- PAGE 2: ACCOUNTS -->
+      <section class="page" id="page-accounts">
+        <div class="ph">
+          <div>
+            <h2 class="ph-title">Roblox Accounts</h2>
+            <p class="ph-desc">Manage multiple accounts with encrypted session storage and automated ticket authentication.</p>
+          </div>
+          <div class="ph-actions">
+            <button class="btn btn-primary" id="btn-open-add-account">
+              <span class="material-icons-round">add</span>
+              <span>Add Account</span>
+            </button>
+            <button class="btn btn-ghost" id="btn-launch-all-accounts">
+              <span class="material-icons-round">play_arrow</span>
+              <span>Launch All</span>
+            </button>
+            <button class="btn btn-danger" id="btn-kill-all">
+              <span class="material-icons-round">close</span>
+              <span>Kill All</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Global Place ID input -->
+        <div class="card" style="margin-bottom: 18px;">
+          <div style="display: flex; gap: 12px; align-items: center;">
+            <span class="material-icons-round" style="color: var(--t2); font-size: 20px;">videogame_asset</span>
+            <div style="flex: 1;">
+              <div style="font-size: 11px; font-weight: 600; color: var(--t3); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 4px;">DEFAULT PLACE ID / GAME TARGET</div>
+              <input type="text" id="global-game-target" class="field input" placeholder="e.g. 189707 or https://www.roblox.com/games/189707/Natural-Disaster-Survival" style="width: 100%; background: var(--s2); border: 1px solid var(--bd); border-radius: var(--r2); padding: 8px 12px; color: #fff; font-size: 12.5px; outline: none;">
+            </div>
+            <button class="btn btn-ghost" id="btn-save-target" style="align-self: flex-end; height: 36px;">Save Target</button>
+          </div>
+        </div>
+
+        <!-- Accounts Grid -->
+        <div class="accounts-grid" id="accounts-container">
+          <div class="empty-state">No accounts added yet. Click "Add Account" to get started!</div>
+        </div>
+      </section>
+
+      <!-- PAGE 3: MIXER & ANTI-AFK -->
+      <section class="page" id="page-mixer">
+        <div class="ph">
+          <div>
+            <h2 class="ph-title">Performance Mixer & Utilities</h2>
+            <p class="ph-desc">OS CoreAudio volume, process priority, Anti-AFK timer, window arrangers, and FPS caps.</p>
+          </div>
+          <button class="btn btn-danger btn-sm" id="btn-kill-all-mixer">
+            <span class="material-icons-round">power_settings_new</span>
+            <span>Kill All Roblox</span>
+          </button>
+        </div>
+
+        <!-- Setting Card: Mutex Status -->
+        <div class="sc">
+          <div class="sc-head">Singleton Mutex & Multi-Instance Engine</div>
+          <div class="sr">
+            <div class="sr-left">
+              <div class="sr-label">ROBLOX_singletonMutex Bypass</div>
+              <div class="sr-desc">RobloxNative daemon holds the singleton mutex and terminates singleton events in Roblox processes.</div>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <span class="badge b-white">ACTIVE</span>
+              <span class="badge b-dark" id="active-pids-badge">0 PIDs</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Setting Card: Audio Volume -->
+        <div class="sc">
+          <div class="sc-head">Audio Session Controls</div>
+          <div class="sr">
+            <div class="sr-left">
+              <div class="sr-label">Roblox Master Volume</div>
+              <div class="sr-desc">Adjusts volume for all running RobloxPlayerBeta instances without altering Windows system audio.</div>
+            </div>
+            <div class="slider-wrap">
+              <input type="range" class="range-slider" id="volume-slider" min="0" max="100" value="100">
+              <span class="slider-val" id="vol-value">100%</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Setting Card: Anti-AFK -->
+        <div class="sc">
+          <div class="sc-head">Anti-AFK Protection</div>
+          <div class="sr">
+            <div class="sr-left">
+              <div class="sr-label">Enable Anti-AFK Heartbeat</div>
+              <div class="sr-desc">Simulates safe background input before Roblox's 20-minute idle disconnect kicks in.</div>
+            </div>
+            <label class="toggle">
+              <input type="checkbox" id="anti-afk-toggle" checked>
+              <span class="toggle-trk"></span>
+            </label>
+          </div>
+          <div class="sr">
+            <div class="sr-left">
+              <div class="sr-label">Heartbeat Cadence</div>
+              <div class="sr-desc">Interval between anti-AFK pulses across all instances.</div>
+            </div>
+            <div class="slider-wrap">
+              <input type="range" class="range-slider" id="afk-slider" min="300" max="1140" step="60" value="1080">
+              <span class="slider-val" id="afk-cadence-label">18 mins</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Setting Card: FPS Cap -->
+        <div class="sc">
+          <div class="sc-head">FPS Cap & FastFlags</div>
+          <div class="sr">
+            <div class="sr-left">
+              <div class="sr-label">Target Framerate</div>
+              <div class="sr-desc">Writes <code>DFIntTaskSchedulerTargetFps</code> in ClientAppSettings.json.</div>
+            </div>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+              <button class="btn btn-ghost btn-sm fps-btn" data-fps="60">60 FPS</button>
+              <button class="btn btn-ghost btn-sm fps-btn" data-fps="144">144 FPS</button>
+              <button class="btn btn-ghost btn-sm fps-btn" data-fps="240">240 FPS</button>
+              <button class="btn btn-ghost btn-sm fps-btn" data-fps="360">360 FPS</button>
+              <button class="btn btn-primary btn-sm fps-btn active" data-fps="0">Uncapped</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Setting Card: Window Arranger -->
+        <div class="sc">
+          <div class="sc-head">Window Arranger</div>
+          <div class="sr">
+            <div class="sr-left">
+              <div class="sr-label">Screen Grid Layout</div>
+              <div class="sr-desc">Automatically tiles all open Roblox windows across your primary display.</div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-ghost btn-sm" id="btn-arrange-grid">
+                <span class="material-icons-round">grid_view</span>
+                <span>Tile 2x2 Grid</span>
+              </button>
+              <button class="btn btn-ghost btn-sm" id="btn-arrange-split">
+                <span class="material-icons-round">view_column</span>
+                <span>Split Left / Right</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Processes Table -->
+        <div class="card" style="margin-top: 14px;">
+          <div class="ph" style="margin-bottom: 10px;">
+            <h3 class="ph-title" style="font-size: 15px;">Active Roblox Processes</h3>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>PID</th>
+                  <th>Process Name</th>
+                  <th>Status</th>
+                  <th style="text-align: right;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="pids-table-body">
+                <tr>
+                  <td colspan="4" style="text-align: center; padding: 20px;">No active Roblox instances running.</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- PAGE 4: SETTINGS & LOGS -->
+      <section class="page" id="page-settings">
+        <div class="ph">
+          <div>
+            <h2 class="ph-title">Settings & Diagnostics</h2>
+            <p class="ph-desc">Inspect configuration paths and live MultiBlox system diagnostics.</p>
+          </div>
+        </div>
+
+        <div class="sc">
+          <div class="sc-head">Directories & Storage</div>
+          <div class="sr">
+            <div class="sr-left">
+              <div class="sr-label">Roblox Versions Directory</div>
+              <div class="sr-desc" id="versions-dir-display" style="font-family:'JetBrains Mono',monospace;">%LOCALAPPDATA%\Roblox\Versions</div>
+            </div>
+            <button class="btn btn-ghost btn-sm" id="btn-open-versions-dir">
+              <span class="material-icons-round">folder_open</span>
+              <span>Open Folder</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="ph" style="margin-bottom: 10px;">
+            <h3 class="ph-title" style="font-size: 15px;">Diagnostic Log Console</h3>
+            <button class="btn btn-ghost btn-sm" id="btn-clear-logs">Clear</button>
+          </div>
+          <div class="log-box" id="log-console">
+            <div class="log-line ok">[SYSTEM] MultiBlox loaded. Native helper active.</div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- Download Progress Modal -->
+  <div class="overlay" id="download-modal">
+    <div class="modal">
+      <div class="modal-head">
+        <div class="modal-title">Downloading Roblox Build</div>
+      </div>
+      <div>
+        <div style="display: flex; justify-content: space-between; font-size: 12.5px; color: var(--t2); margin-bottom: 6px;">
+          <span id="dl-status-text">Connecting to setup-aws.rbxcdn.com...</span>
+          <span style="font-family:'JetBrains Mono',monospace; color: #fff; font-weight: 600;" id="dl-percent-text">0%</span>
+        </div>
+        <div class="progress-bar-wrap">
+          <div class="progress-bar-fill" id="dl-progress-bar"></div>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size: 11px; color: var(--t3);" id="dl-pkg-text">Preparing manifest...</div>
+      </div>
+      <div style="display: flex; justify-content: flex-end; margin-top: 20px;">
+        <button class="btn btn-ghost" id="btn-cancel-download">Cancel Download</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add Account Modal -->
+  <div class="overlay" id="add-account-modal">
+    <div class="modal">
+      <div class="modal-head">
+        <div class="modal-title">Add Roblox Account</div>
+        <button class="modal-close" id="btn-close-account-modal">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+      <p style="font-size: 12.5px; color: var(--t2); margin-bottom: 16px; line-height: 1.5;">
+        Paste your <code>.ROBLOSECURITY</code> cookie below. Cookies are encrypted locally with AES-256-GCM and never leave your machine.
+      </p>
+      <div class="field">
+        <label>ROBLOSECURITY Cookie</label>
+        <textarea id="cookie-input" rows="3" placeholder="_|WARNING:-DO-NOT-SHARE-THIS..."></textarea>
+      </div>
+      <div class="field">
+        <label>Account Nickname (Optional)</label>
+        <input type="text" id="nickname-input" placeholder="e.g. Main Alt, Farm 1">
+      </div>
+      <div id="account-validate-status" style="font-size: 12px; margin-bottom: 12px;"></div>
+      <div style="display: flex; gap: 8px; justify-content: flex-end;">
+        <button class="btn btn-ghost" id="btn-cancel-account">Cancel</button>
+        <button class="btn btn-primary" id="btn-save-account">Verify & Save</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

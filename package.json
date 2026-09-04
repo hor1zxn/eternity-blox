@@ -1,0 +1,26 @@
+{
+  "name": "multiblox",
+  "version": "1.0.0",
+  "description": "Roblox Version Downgrader, Version Selector & Multi-Instance Manager",
+  "main": "src/main/main.js",
+  "scripts": {
+    "start": "electron .",
+    "compile-native": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe /nologo /optimize+ /platform:x64 /target:exe /r:System.Drawing.dll /out:resources\\RobloxNative.exe resources\\RobloxNative.cs"
+  },
+  "keywords": [
+    "roblox",
+    "downgrader",
+    "version-selector",
+    "multiblox",
+    "multi-instance"
+  ],
+  "author": "MultiBlox",
+  "license": "MIT",
+  "dependencies": {
+    "adm-zip": "^0.5.16",
+    "axios": "^1.7.9"
+  },
+  "devDependencies": {
+    "electron": "^34.2.0"
+  }
+}
