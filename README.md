@@ -1,6 +1,6 @@
-# 🦖 MultiBlox: Roblox Version Downgrader / Selector & Multi-Instance Manager
+# 🦖 EternityBlox: Roblox Version Downgrader / Selector & Multi-Instance Manager
 
-**MultiBlox** combines the best of **TiRex Downgrader** and **MultiRoblox-RAM** into a unified, high-performance Windows desktop application.
+**EternityBlox** combines the best of **TiRex Downgrader** and **MultiRoblox-RAM** into a unified, high-performance Windows desktop application with an ultra-clean monochrome Black & White theme.
 
 ---
 

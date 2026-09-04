@@ -1,7 +1,7 @@
 {
-  "name": "multiblox",
+  "name": "eternityblox",
   "version": "1.0.0",
-  "description": "Roblox Version Downgrader, Version Selector & Multi-Instance Manager",
+  "description": "EternityBlox - Roblox Version Downgrader, Version Selector & Multi-Instance Manager",
   "main": "src/main/main.js",
   "scripts": {
     "start": "electron .",

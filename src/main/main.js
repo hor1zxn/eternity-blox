@@ -22,7 +22,7 @@ function createWindow() {
     minWidth: 980,
     minHeight: 640,
     frame: false,
-    title: 'MultiBlox',
+    title: 'EternityBlox',
     backgroundColor: '#090a0f',
     icon: path.join(__dirname, '..', '..', 'resources', 'icon.ico'),
     webPreferences: {

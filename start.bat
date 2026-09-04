@@ -1,8 +1,8 @@
 @echo off
-title MultiBlox
+title EternityBlox
 cd /d "%~dp0"
-echo ===================================================
-echo   Starting MultiBlox - Roblox Downgrader & Multi-Instance
-echo ===================================================
+echo =======================================================
+echo   Starting EternityBlox - Roblox Downgrader & Multi-Instance
+echo =======================================================
 echo.
 npm start

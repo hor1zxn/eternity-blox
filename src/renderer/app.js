@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (quickPlaceId) quickPlaceId.value = state.settings.gameTarget;
       }
 
-      log('Initializing MultiBlox Black & White Edition...');
+      log('Initializing EternityBlox Black & White Edition...');
       await loadInstalledVersions();
       await fetchLiveDeployData();
       await loadAccounts();
