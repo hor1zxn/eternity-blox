@@ -50,7 +50,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnQuickLaunch = document.getElementById('btn-quick-launch');
   const btnDowngradeLaunch = document.getElementById('btn-downgrade-launch');
   const btnLaunchMore = document.getElementById('btn-launch-more');
-  const quickPlaceId = document.getElementById('quick-place-id');
   const customHashInput = document.getElementById('custom-hash-input');
   const btnInstallCustom = document.getElementById('btn-install-custom');
   const installedVersionsContainer = document.getElementById('installed-versions-container');
@@ -119,7 +118,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       state.activeVersion = state.settings.activeVersion || '';
       if (state.settings.gameTarget) {
         if (globalGameTarget) globalGameTarget.value = state.settings.gameTarget;
-        if (quickPlaceId) quickPlaceId.value = state.settings.gameTarget;
       }
 
       log('Initializing EternityBlox Black & White Edition...');
@@ -207,7 +205,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   window.launchSpecificVersion = async (hash) => {
     try {
-      const target = (quickPlaceId?.value || globalGameTarget?.value || '').trim();
+      const target = (globalGameTarget?.value || '').trim();
       log(`Launching instance of ${hash}...`);
       const res = await window.api.launchInstance({ versionHash: hash, target });
       log(`Launched Roblox (PID: ${res.pid}) with build ${res.version}!`, 'ok');
@@ -359,7 +357,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    const target = (quickPlaceId?.value || globalGameTarget?.value || '').trim();
+    const target = (globalGameTarget?.value || '').trim();
     log(`Spawning active Roblox build (${targetHash})...`);
     try {
       const res = await window.api.launchInstance({ versionHash: targetHash, target });
@@ -380,7 +378,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       renderInstalledVersions();
     }
 
-    const target = (quickPlaceId?.value || globalGameTarget?.value || '').trim();
+    const target = (globalGameTarget?.value || '').trim();
     log('Spawning additional Roblox instance...');
     try {
       const res = await window.api.launchMultiple({ count: 1, versionHash: targetHash, target });
