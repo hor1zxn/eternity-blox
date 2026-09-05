@@ -516,41 +516,110 @@ document.addEventListener('DOMContentLoaded', async () => {
   function renderInstalledVersions() {
     if (!installedVersionsContainer) return;
     if (state.installedVersions.length === 0) {
-      installedVersionsContainer.innerHTML = '<div style="color:var(--t3); padding:24px; text-align:center; font-size:12.5px; grid-column:1/-1;">No Roblox builds found on disk. Paste a version hash above to install!</div>';
+      installedVersionsContainer.innerHTML = '<div class="empty-state">No Roblox builds found on disk. Paste a version hash above to install!</div>';
       return;
     }
 
     installedVersionsContainer.innerHTML = state.installedVersions.map(v => {
       const isActive = v.hash === state.activeVersion;
       const sizeMB = (v.sizeBytes / (1024 * 1024)).toFixed(1);
+      const isVersionPrefixed = v.hash.startsWith('version-');
+      const hashPrefix = isVersionPrefixed ? 'version-' : '';
+      const hashBody = isVersionPrefixed ? v.hash.replace('version-', '') : v.hash;
+      const cleanPath = v.path ? v.path.replace(/\\/g, '\\\\') : '';
+
       return `
-        <div class="ver-card ${isActive ? 'active-build' : ''}">
-          <div>
-            <div class="ver-card-top">
-              <span class="ver-card-hash">${v.hash}</span>
-              ${isActive ? '<span class="badge b-white">ACTIVE</span>' : ''}
+        <div class="ver-card ${isActive ? 'active-build' : ''}" data-hash="${v.hash}">
+          ${isActive ? '<div class="ver-card-glow-beam"></div>' : ''}
+          
+          <div class="ver-card-top-row">
+            <div class="ver-card-badge-icon ${isActive ? 'active' : ''}">
+              <span class="material-icons-round">${isActive ? 'verified' : 'memory'}</span>
             </div>
-            <div class="ver-card-meta">
-              <span>${v.dateStr}</span>
-              <span>${sizeMB} MB</span>
+            <div class="ver-card-header-text">
+              <div class="ver-card-hash-row">
+                <span class="ver-card-hash" title="${v.hash}">
+                  ${hashPrefix ? `<span class="ver-hash-prefix">${hashPrefix}</span>` : ''}<span class="ver-hash-val">${hashBody}</span>
+                </span>
+                <button class="ver-copy-icon-btn" title="Copy Version Hash" onclick="window.copyVersionHash('${v.hash}', this)">
+                  <span class="material-icons-round">content_copy</span>
+                </button>
+              </div>
+              <div class="ver-card-meta">
+                <span class="ver-meta-item"><span class="material-icons-round">schedule</span>${v.dateStr || 'Installed'}</span>
+                <span class="ver-meta-dot">•</span>
+                <span class="ver-meta-item"><span class="material-icons-round">storage</span>${sizeMB} MB</span>
+              </div>
+            </div>
+            <div class="ver-card-status">
+              ${isActive ? `
+                <div class="ver-status-capsule active">
+                  <span class="ver-status-dot"></span>
+                  <span>ACTIVE</span>
+                </div>
+              ` : `
+                <div class="ver-status-capsule idle">
+                  <span>STANDBY</span>
+                </div>
+              `}
             </div>
           </div>
+
+          <div class="ver-card-divider"></div>
+
           <div class="ver-card-actions">
-            <button class="btn ${isActive ? 'btn-primary' : 'btn-ghost'} btn-sm" onclick="window.setActiveVersion('${v.hash}')">
-              ${isActive ? 'Active Target' : 'Set Active'}
-            </button>
-            <button class="btn btn-ghost btn-sm" onclick="window.launchSpecificVersion('${v.hash}')">
+            ${isActive ? `
+              <button class="btn btn-ver-active" disabled>
+                <span class="material-icons-round">check_circle</span>
+                <span>Active Target</span>
+              </button>
+            ` : `
+              <button class="btn btn-ver-set-active" onclick="window.setActiveVersion('${v.hash}')">
+                <span class="material-icons-round">radio_button_unchecked</span>
+                <span>Set Active</span>
+              </button>
+            `}
+            <button class="btn btn-ver-launch" onclick="window.launchSpecificVersion('${v.hash}')" title="Launch Roblox using this build">
               <span class="material-icons-round">play_arrow</span>
               <span>Launch</span>
             </button>
-            <button class="btn btn-ghost btn-sm" title="Delete build" onclick="window.deleteVersionPrompt('${v.hash}')">
-              <span class="material-icons-round" style="color:var(--red);">delete</span>
-            </button>
+            <div class="ver-action-icons">
+              ${v.path ? `
+                <button class="btn btn-ver-icon" title="Open build directory in File Explorer" onclick="window.openBuildFolder('${cleanPath}')">
+                  <span class="material-icons-round">folder_open</span>
+                </button>
+              ` : ''}
+              <button class="btn btn-ver-icon danger" title="Delete build files" onclick="window.deleteVersionPrompt('${v.hash}')">
+                <span class="material-icons-round">delete_outline</span>
+              </button>
+            </div>
           </div>
         </div>
       `;
     }).join('');
   }
+
+  window.openBuildFolder = (dir) => {
+    if (dir) window.api.openExternal(dir);
+  };
+
+  window.copyVersionHash = async (hash, btn) => {
+    try {
+      await navigator.clipboard.writeText(hash);
+      if (btn) {
+        const icon = btn.querySelector('.material-icons-round');
+        if (icon) {
+          icon.textContent = 'check';
+          icon.style.color = 'var(--green)';
+          setTimeout(() => {
+            icon.textContent = 'content_copy';
+            icon.style.color = '';
+          }, 1500);
+        }
+      }
+      log(`Copied version hash: ${hash}`, 'ok');
+    } catch {}
+  };
 
   window.setActiveVersion = (hash) => {
     state.activeVersion = hash;
