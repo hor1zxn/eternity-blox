@@ -134,6 +134,12 @@
         <span class="deck-tab-badge" id="badge-deck-accounts">0</span>
       </button>
 
+      <button class="deck-tab" data-view="view-processes">
+        <span class="material-icons-round">dvr</span>
+        <span class="deck-tab-title">Active Processes</span>
+        <span class="deck-tab-badge" id="badge-pids-count">0</span>
+      </button>
+
       <button class="deck-tab" data-view="view-mixer">
         <span class="material-icons-round">tune</span>
         <span class="deck-tab-title">Mixer & FastFlags</span>
@@ -227,6 +233,81 @@
         </div>
       </section>
 
+      <!-- VIEW 3: ACTIVE PROCESSES -->
+      <section class="deck-view" id="view-processes">
+        <!-- Process Deck Header Banner -->
+        <div class="card" style="margin-bottom: 14px;">
+          <div class="ph" style="margin-bottom: 0;">
+            <div>
+              <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 4px;">
+                <span class="material-icons-round" style="font-size: 22px; color: #ffffff;">dvr</span>
+                <h2 class="ph-title" style="font-size: 16px; margin-bottom: 0;">Active Roblox Processes</h2>
+              </div>
+              <p class="ph-desc" style="margin-bottom: 0;">Real-time process monitor, PID telemetry, memory handles, and per-instance controls.</p>
+            </div>
+            <div style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
+              <span class="badge b-white" id="proc-mutex-pill">MUTEX ACTIVE</span>
+              <span class="badge b-dark" id="active-pids-badge">0 PIDs</span>
+              <button class="btn btn-ghost btn-sm" id="btn-refresh-processes">
+                <span class="material-icons-round">refresh</span>
+                <span>Refresh</span>
+              </button>
+              <button class="btn btn-danger btn-sm" id="btn-kill-all-processes">
+                <span class="material-icons-round" style="font-size: 16px;">power_settings_new</span>
+                <span>Kill All Instances</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Window Arrangement Quick Bar inside Process Manager -->
+        <div class="sc" style="margin-bottom: 14px;">
+          <div class="sr">
+            <div class="sr-left">
+              <div class="sr-label">Display & Window Tile Tools</div>
+              <div class="sr-desc">Instantly tile or split running Roblox game windows across your primary display.</div>
+            </div>
+            <div style="display: flex; gap: 8px;">
+              <button class="btn btn-ghost btn-sm" id="btn-arrange-grid-proc">
+                <span class="material-icons-round">grid_view</span>
+                <span>Tile 2x2 Grid</span>
+              </button>
+              <button class="btn btn-ghost btn-sm" id="btn-arrange-split-proc">
+                <span class="material-icons-round">view_column</span>
+                <span>Split Left / Right</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Processes Table Card -->
+        <div class="card">
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width: 130px;">PID</th>
+                  <th>Account Session</th>
+                  <th>Target Experience</th>
+                  <th style="width: 150px;">Status</th>
+                  <th style="text-align: right; width: 140px;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="pids-table-body">
+                <tr>
+                  <td colspan="5" style="text-align: center; padding: 32px; color: var(--t3);">
+                    <div style="display: flex; flex-direction: column; align-items: center; gap: 8px;">
+                      <span class="material-icons-round" style="font-size: 32px; opacity: 0.3;">memory</span>
+                      <span>No active Roblox instances running.</span>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
       <!-- VIEW 4: PERFORMANCE MIXER & UTILITIES -->
       <section class="deck-view" id="view-mixer">
         <div class="ph">
@@ -250,7 +331,7 @@
             </div>
             <div style="display: flex; gap: 8px; align-items: center;">
               <span class="badge b-white">ACTIVE</span>
-              <span class="badge b-dark" id="active-pids-badge">0 PIDs</span>
+              <span class="badge b-dark" id="mixer-pids-badge">0 PIDs</span>
             </div>
           </div>
         </div>
@@ -331,31 +412,6 @@
                 <span>Split Left / Right</span>
               </button>
             </div>
-          </div>
-        </div>
-
-        <!-- Processes Table -->
-        <div class="card" style="margin-top: 14px;">
-          <div class="ph" style="margin-bottom: 10px;">
-            <h3 class="ph-title" style="font-size: 15px;">Active Roblox Processes</h3>
-          </div>
-          <div class="table-wrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>PID</th>
-                  <th>Account Session</th>
-                  <th>Target Experience</th>
-                  <th>Status</th>
-                  <th style="text-align: right;">Action</th>
-                </tr>
-              </thead>
-              <tbody id="pids-table-body">
-                <tr>
-                  <td colspan="5" style="text-align: center; padding: 24px; color: var(--t3);">No active Roblox instances running.</td>
-                </tr>
-              </tbody>
-            </table>
           </div>
         </div>
       </section>

@@ -261,6 +261,14 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnKillAll = document.getElementById('btn-kill-all');
   const navKillAll = document.getElementById('nav-kill-all');
 
+  // Active Processes Tab Elements
+  const btnRefreshProcesses = document.getElementById('btn-refresh-processes');
+  const btnKillAllProcesses = document.getElementById('btn-kill-all-processes');
+  const btnArrangeGridProc = document.getElementById('btn-arrange-grid-proc');
+  const btnArrangeSplitProc = document.getElementById('btn-arrange-split-proc');
+  const procMutexPill = document.getElementById('proc-mutex-pill');
+  const mixerPidsBadge = document.getElementById('mixer-pids-badge');
+
   // Mixer Elements
   const volumeSlider = document.getElementById('volume-slider');
   const volValue = document.getElementById('vol-value');
@@ -1010,7 +1018,30 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   btnKillAll?.addEventListener('click', killAction);
   btnKillAllMixer?.addEventListener('click', killAction);
+  btnKillAllProcesses?.addEventListener('click', killAction);
   navKillAll?.addEventListener('click', killAction);
+
+  btnRefreshProcesses?.addEventListener('click', async () => {
+    await loadStatus();
+    log('Refreshed active process list.', 'ok');
+  });
+
+  btnArrangeGridProc?.addEventListener('click', () => {
+    window.api.arrangeWindows('grid');
+    log('Arranged Roblox windows in 2x2 grid.', 'ok');
+  });
+
+  btnArrangeSplitProc?.addEventListener('click', () => {
+    window.api.arrangeWindows('split');
+    log('Arranged Roblox windows side-by-side.', 'ok');
+  });
+
+  const switchToProcessesTab = () => {
+    const procTab = document.querySelector('.deck-tab[data-view="view-processes"]');
+    if (procTab) procTab.click();
+  };
+  cockpitPidsVal?.addEventListener('click', switchToProcessesTab);
+  instanceCountLabel?.addEventListener('click', switchToProcessesTab);
 
   btnSaveTarget?.addEventListener('click', () => {
     const t = getTargetGame();
@@ -1091,6 +1122,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const count = state.runningPids.length;
     if (instanceCountLabel) instanceCountLabel.textContent = `${count} Running`;
     if (activePidsBadge) activePidsBadge.textContent = `${count} PIDs`;
+    if (mixerPidsBadge) mixerPidsBadge.textContent = `${count} PIDs`;
     if (badgePidsCount) badgePidsCount.textContent = `${count}`;
     if (cockpitPidsVal) cockpitPidsVal.textContent = `${count} PIDs`;
     const cockpitRunningCount = document.getElementById('cockpit-running-count');
@@ -1219,13 +1251,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   function updateMutexUI(held) {
-    if (!mutexPill || !mutexLabel) return;
-    if (held) {
-      mutexPill.className = 'tb-pill live';
-      mutexLabel.textContent = 'Multi-Instance Active';
-    } else {
-      mutexPill.className = 'tb-pill';
-      mutexLabel.textContent = 'Multi-Instance Standby';
+    if (mutexPill && mutexLabel) {
+      if (held) {
+        mutexPill.className = 'tb-pill live';
+        mutexLabel.textContent = 'Multi-Instance Active';
+      } else {
+        mutexPill.className = 'tb-pill';
+        mutexLabel.textContent = 'Multi-Instance Standby';
+      }
+    }
+    if (procMutexPill) {
+      if (held) {
+        procMutexPill.className = 'badge b-white';
+        procMutexPill.textContent = 'MUTEX ACTIVE';
+      } else {
+        procMutexPill.className = 'badge b-dark';
+        procMutexPill.textContent = 'MUTEX STANDBY';
+      }
     }
   }
 
