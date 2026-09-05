@@ -120,41 +120,42 @@
     </header>
 
     <!-- SUB-DECK SEGMENTED TABS -->
-    <nav id="deck-tabs">
-      <button class="deck-tab active" data-view="view-installed">
-        <span class="material-icons-round">storage</span>
-        <span class="deck-tab-title">Installed Builds</span>
-        <span class="deck-tab-badge" id="badge-installed-count">0</span>
-      </button>
+    <div class="deck-tabs-bar">
+      <nav id="deck-tabs">
+        <button class="deck-tab active" data-view="view-installed">
+          <span class="material-icons-round">storage</span>
+          <span class="deck-tab-title">Installed Builds</span>
+          <span class="deck-tab-badge" id="badge-installed-count">0</span>
+        </button>
 
+        <button class="deck-tab" data-view="view-accounts">
+          <span class="material-icons-round">people</span>
+          <span class="deck-tab-title">Accounts</span>
+          <span class="deck-tab-badge" id="badge-deck-accounts">0</span>
+        </button>
 
-      <button class="deck-tab" data-view="view-accounts">
-        <span class="material-icons-round">people</span>
-        <span class="deck-tab-title">Accounts</span>
-        <span class="deck-tab-badge" id="badge-deck-accounts">0</span>
-      </button>
+        <button class="deck-tab" data-view="view-processes">
+          <span class="material-icons-round">dvr</span>
+          <span class="deck-tab-title">Active Processes</span>
+          <span class="deck-tab-badge" id="badge-pids-count">0</span>
+        </button>
 
-      <button class="deck-tab" data-view="view-processes">
-        <span class="material-icons-round">dvr</span>
-        <span class="deck-tab-title">Active Processes</span>
-        <span class="deck-tab-badge" id="badge-pids-count">0</span>
-      </button>
+        <button class="deck-tab" data-view="view-mixer">
+          <span class="material-icons-round">tune</span>
+          <span class="deck-tab-title">Mixer & FastFlags</span>
+        </button>
 
-      <button class="deck-tab" data-view="view-mixer">
-        <span class="material-icons-round">tune</span>
-        <span class="deck-tab-title">Mixer & FastFlags</span>
-      </button>
+        <button class="deck-tab" data-view="view-logs">
+          <span class="material-icons-round">terminal</span>
+          <span class="deck-tab-title">Diagnostics & Logs</span>
+        </button>
 
-      <button class="deck-tab" data-view="view-logs">
-        <span class="material-icons-round">terminal</span>
-        <span class="deck-tab-title">Diagnostics & Logs</span>
-      </button>
-
-      <button class="deck-tab" data-view="view-credits">
-        <span class="material-icons-round">workspace_premium</span>
-        <span class="deck-tab-title">Credits</span>
-      </button>
-    </nav>
+        <button class="deck-tab" data-view="view-credits">
+          <span class="material-icons-round">workspace_premium</span>
+          <span class="deck-tab-title">Credits</span>
+        </button>
+      </nav>
+    </div>
 
     <!-- WORKSPACE VIEWS CONTAINER -->
     <main id="deck-workspace">
