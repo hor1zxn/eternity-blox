@@ -3,7 +3,8 @@ const path = require('path');
 const crypto = require('crypto');
 const os = require('os');
 
-const CONFIG_DIR = path.join(os.homedir(), '.multiblox');
+const CONFIG_DIR = path.join(os.homedir(), '.eternityblox');
+const LEGACY_CONFIG_DIR = path.join(os.homedir(), '.multiblox');
 const ACCOUNTS_FILE = path.join(CONFIG_DIR, 'accounts.json');
 const SETTINGS_FILE = path.join(CONFIG_DIR, 'settings.json');
 const KEY_FILE = path.join(CONFIG_DIR, '.key');
@@ -11,6 +12,21 @@ const KEY_FILE = path.join(CONFIG_DIR, '.key');
 function ensureConfigDir() {
   if (!fs.existsSync(CONFIG_DIR)) {
     fs.mkdirSync(CONFIG_DIR, { recursive: true });
+    // Migrate legacy data if present
+    if (fs.existsSync(LEGACY_CONFIG_DIR)) {
+      try {
+        const files = fs.readdirSync(LEGACY_CONFIG_DIR);
+        for (const file of files) {
+          const src = path.join(LEGACY_CONFIG_DIR, file);
+          const dest = path.join(CONFIG_DIR, file);
+          if (fs.existsSync(src) && !fs.existsSync(dest)) {
+            fs.copyFileSync(src, dest);
+          }
+        }
+      } catch (e) {
+        console.warn('Could not migrate legacy multiblox directory:', e.message);
+      }
+    }
   }
 }
 

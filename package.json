@@ -1,26 +1,72 @@
 {
   "name": "eternityblox",
+  "productName": "EternityBlox",
   "version": "1.0.0",
   "description": "EternityBlox - Roblox Version Downgrader, Version Selector & Multi-Instance Manager",
   "main": "src/main/main.js",
+  "author": "EternityBlox",
+  "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "compile-native": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe /nologo /optimize+ /platform:x64 /target:exe /r:System.Drawing.dll /out:resources\\RobloxNative.exe resources\\RobloxNative.cs"
+    "compile-native": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe /nologo /optimize+ /platform:x64 /target:exe /r:System.Drawing.dll /out:resources\\RobloxNative.exe resources\\RobloxNative.cs",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder -w nsis",
+    "dist:portable": "electron-builder -w portable"
   },
   "keywords": [
     "roblox",
     "downgrader",
     "version-selector",
+    "eternityblox",
     "multiblox",
     "multi-instance"
   ],
-  "author": "MultiBlox",
-  "license": "MIT",
+  "build": {
+    "appId": "com.eternityblox.launcher",
+    "productName": "EternityBlox",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "src/**/*",
+      "resources/**/*",
+      "package.json"
+    ],
+    "asar": true,
+    "asarUnpack": [
+      "resources/RobloxNative.exe"
+    ],
+    "extraResources": [
+      "resources/RobloxNative.exe",
+      "resources/icon.ico"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "resources/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "shortcutName": "EternityBlox",
+      "uninstallDisplayName": "EternityBlox",
+      "runAfterFinish": true
+    }
+  },
   "dependencies": {
     "adm-zip": "^0.5.16",
     "axios": "^1.7.9"
   },
   "devDependencies": {
-    "electron": "^34.2.0"
+    "electron": "^34.2.0",
+    "electron-builder": "^25.1.8"
   }
 }

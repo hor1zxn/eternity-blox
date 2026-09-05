@@ -13,11 +13,25 @@ class NativeHelper extends EventEmitter {
     this.runningPids = [];
     this.mutexHeld = false;
     this.isShuttingDown = false;
-    this.exePath = path.join(__dirname, '..', '..', 'resources', 'RobloxNative.exe');
+    this.exePath = this.resolveExecutablePath();
     this.csPath = path.join(__dirname, '..', '..', 'resources', 'RobloxNative.cs');
   }
 
+  resolveExecutablePath() {
+    const candidates = [
+      path.join(__dirname, '..', '..', 'resources', 'RobloxNative.exe'),
+      path.join(process.resourcesPath || '', 'RobloxNative.exe'),
+      path.join(process.resourcesPath || '', 'resources', 'RobloxNative.exe'),
+      path.join(process.resourcesPath || '', 'app.asar.unpacked', 'resources', 'RobloxNative.exe')
+    ];
+    for (const c of candidates) {
+      if (fs.existsSync(c)) return c;
+    }
+    return candidates[0];
+  }
+
   ensureExecutable() {
+    this.exePath = this.resolveExecutablePath();
     if (fs.existsSync(this.exePath)) return true;
     const cscPath = 'C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe';
     if (!fs.existsSync(cscPath)) {
