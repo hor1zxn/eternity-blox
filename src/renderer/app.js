@@ -391,7 +391,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnArrangeGrid = document.getElementById('btn-arrange-grid');
   const btnArrangeSplit = document.getElementById('btn-arrange-split');
   const pidsTableBody = document.getElementById('pids-table-body');
-  const btnKillAllMixer = document.getElementById('btn-kill-all-mixer');
   const fpsButtons = document.querySelectorAll('.fps-btn');
 
   // Settings Elements
@@ -1257,7 +1256,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   btnKillAll?.addEventListener('click', killAction);
-  btnKillAllMixer?.addEventListener('click', killAction);
   btnKillAllProcesses?.addEventListener('click', killAction);
   navKillAll?.addEventListener('click', killAction);
 
