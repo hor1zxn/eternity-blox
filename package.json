@@ -45,7 +45,8 @@
     ],
     "asar": true,
     "asarUnpack": [
-      "resources/RobloxNative.exe"
+      "resources/RobloxNative.exe",
+      "resources/arrange-windows.ps1"
     ],
     "extraResources": [
       "resources/RobloxNative.exe",
@@ -54,7 +55,6 @@
     ],
     "win": {
       "sign": null,
-      "signAndEditExecutable": false,
       "signDlls": false,
       "signExts": [],
       "target": [

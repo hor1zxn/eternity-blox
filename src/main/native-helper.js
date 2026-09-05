@@ -3,6 +3,7 @@ const path = require('path');
 const fs = require('fs');
 const readline = require('readline');
 const EventEmitter = require('events');
+const { app } = require('electron');
 
 class NativeHelper extends EventEmitter {
   constructor() {
@@ -20,16 +21,50 @@ class NativeHelper extends EventEmitter {
   }
 
   resolveExecutablePath() {
-    const candidates = [
-      path.join(__dirname, '..', '..', 'resources', 'RobloxNative.exe'),
-      path.join(process.resourcesPath || '', 'RobloxNative.exe'),
-      path.join(process.resourcesPath || '', 'resources', 'RobloxNative.exe'),
-      path.join(process.resourcesPath || '', 'app.asar.unpacked', 'resources', 'RobloxNative.exe')
-    ];
-    for (const c of candidates) {
-      if (fs.existsSync(c)) return c;
+    const isPackaged = (app && app.isPackaged) || (__dirname.includes('app.asar'));
+    if (isPackaged && process.resourcesPath) {
+      const packagedCandidates = [
+        path.join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'RobloxNative.exe'),
+        path.join(process.resourcesPath, 'resources', 'RobloxNative.exe'),
+        path.join(process.resourcesPath, 'RobloxNative.exe')
+      ];
+      for (const p of packagedCandidates) {
+        if (fs.existsSync(p)) return p;
+      }
     }
-    return candidates[0];
+
+    const devPath = path.join(__dirname, '..', '..', 'resources', 'RobloxNative.exe');
+    if (devPath.includes('app.asar') && !devPath.includes('app.asar.unpacked')) {
+      const unpacked = devPath.replace('app.asar', 'app.asar.unpacked');
+      if (fs.existsSync(unpacked)) return unpacked;
+      if (process.resourcesPath) {
+        const resCandidate = path.join(process.resourcesPath, 'resources', 'RobloxNative.exe');
+        if (fs.existsSync(resCandidate)) return resCandidate;
+      }
+    }
+
+    return devPath;
+  }
+
+  resolvePsScriptPath() {
+    const isPackaged = (app && app.isPackaged) || (__dirname.includes('app.asar'));
+    if (isPackaged && process.resourcesPath) {
+      const packagedCandidates = [
+        path.join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'arrange-windows.ps1'),
+        path.join(process.resourcesPath, 'resources', 'arrange-windows.ps1'),
+        path.join(process.resourcesPath, 'arrange-windows.ps1')
+      ];
+      for (const p of packagedCandidates) {
+        if (fs.existsSync(p)) return p;
+      }
+    }
+
+    const devPath = path.join(__dirname, '..', '..', 'resources', 'arrange-windows.ps1');
+    if (devPath.includes('app.asar') && !devPath.includes('app.asar.unpacked')) {
+      const unpacked = devPath.replace('app.asar', 'app.asar.unpacked');
+      if (fs.existsSync(unpacked)) return unpacked;
+    }
+    return devPath;
   }
 
   ensureExecutable() {
@@ -245,7 +280,7 @@ class NativeHelper extends EventEmitter {
     } catch (err) {
       console.warn('[NativeHelper] tile2x2 error:', err.message);
       try {
-        const psScript = path.join(__dirname, '..', '..', 'resources', 'arrange-windows.ps1');
+        const psScript = this.resolvePsScriptPath();
         if (fs.existsSync(psScript)) {
           const out = execSync(`powershell -NoProfile -ExecutionPolicy Bypass -File "${psScript}" -Mode grid`, {
             timeout: 4000,
