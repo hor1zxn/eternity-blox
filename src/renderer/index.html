@@ -480,7 +480,7 @@
 
   <!-- Add Account Modal -->
   <div class="overlay" id="add-account-modal">
-    <div class="modal">
+    <div class="modal" style="max-width: 480px;">
       <div class="modal-head">
         <div style="display: flex; align-items: center; gap: 8px;">
           <img src="../eternityblox.png" alt="" style="width: 20px; height: 20px; object-fit: contain;">
@@ -490,21 +490,84 @@
           <span class="material-icons-round">close</span>
         </button>
       </div>
-      <p style="font-size: 12.5px; color: var(--t2); margin-bottom: 16px; line-height: 1.5;">
-        Paste your <code>.ROBLOSECURITY</code> cookie below. Cookies are encrypted locally with AES-256-GCM and never leave your machine.
-      </p>
-      <div class="field">
-        <label>ROBLOSECURITY Cookie</label>
-        <textarea id="cookie-input" rows="3" placeholder="_|WARNING:-DO-NOT-SHARE-THIS..."></textarea>
+
+      <!-- Segmented Method Switcher -->
+      <div class="modal-subtabs">
+        <button class="modal-subtab-btn active" id="tab-btn-roblox-login">
+          <span class="material-icons-round">public</span>
+          <span>Sign in with Roblox</span>
+        </button>
+        <button class="modal-subtab-btn" id="tab-btn-manual-cookie">
+          <span class="material-icons-round">vpn_key</span>
+          <span>Manual Cookie</span>
+        </button>
       </div>
-      <div class="field">
-        <label>Account Nickname (Optional)</label>
-        <input type="text" id="nickname-input" placeholder="e.g. Main Alt, Farm 1">
+
+      <!-- METHOD 1: Sign in with Roblox (Official Web Login) -->
+      <div class="add-acc-panel active" id="panel-roblox-login">
+        <div class="roblox-web-card">
+          <div class="roblox-web-card-top">
+            <div class="roblox-web-icon-wrap">
+              <span class="material-icons-round">lock_open</span>
+            </div>
+            <div>
+              <h4 style="font-size: 13.5px; color: #fff; margin-bottom: 3px; font-weight: 700;">Official Roblox Web Sign-In</h4>
+              <p style="font-size: 11.5px; color: var(--t2); margin-bottom: 0; line-height: 1.45;">
+                Log in securely via Roblox. Supports 2FA, Passkeys, and Quick Log In (QR code scan from mobile).
+              </p>
+            </div>
+          </div>
+
+          <div class="roblox-web-features">
+            <div class="roblox-feat-item">
+              <span class="material-icons-round">check_circle</span>
+              <span>Automated session token capture</span>
+            </div>
+            <div class="roblox-feat-item">
+              <span class="material-icons-round">qr_code_scanner</span>
+              <span>Quick Log In & Passkey support</span>
+            </div>
+            <div class="roblox-feat-item">
+              <span class="material-icons-round">shield</span>
+              <span>AES-256-GCM encrypted local storage</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="field" style="margin-top: 14px;">
+          <label>Account Nickname (Optional)</label>
+          <input type="text" id="nickname-input-web" placeholder="e.g. Main Account, Trader Alt">
+        </div>
+
+        <div id="roblox-web-login-status" style="font-size: 12px; margin-bottom: 12px; min-height: 18px;"></div>
+
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <button class="btn btn-ghost" id="btn-cancel-account-web">Cancel</button>
+          <button class="btn btn-primary" id="btn-launch-roblox-login" style="display: flex; align-items: center; gap: 6px;">
+            <span class="material-icons-round" style="font-size: 16px;">open_in_new</span>
+            <span id="btn-launch-roblox-login-text">Sign In with Roblox</span>
+          </button>
+        </div>
       </div>
-      <div id="account-validate-status" style="font-size: 12px; margin-bottom: 12px;"></div>
-      <div style="display: flex; gap: 8px; justify-content: flex-end;">
-        <button class="btn btn-ghost" id="btn-cancel-account">Cancel</button>
-        <button class="btn btn-primary" id="btn-save-account">Verify & Save</button>
+
+      <!-- METHOD 2: Manual Cookie Entry -->
+      <div class="add-acc-panel" id="panel-manual-cookie" style="display: none;">
+        <p style="font-size: 12px; color: var(--t2); margin-bottom: 14px; line-height: 1.5;">
+          Paste your <code>.ROBLOSECURITY</code> cookie below. Cookies are encrypted locally with AES-256-GCM and never leave your computer.
+        </p>
+        <div class="field">
+          <label>ROBLOSECURITY Cookie</label>
+          <textarea id="cookie-input" rows="3" placeholder="_|WARNING:-DO-NOT-SHARE-THIS..."></textarea>
+        </div>
+        <div class="field">
+          <label>Account Nickname (Optional)</label>
+          <input type="text" id="nickname-input" placeholder="e.g. Main Alt, Farm 1">
+        </div>
+        <div id="account-validate-status" style="font-size: 12px; margin-bottom: 12px; min-height: 18px;"></div>
+        <div style="display: flex; gap: 8px; justify-content: flex-end;">
+          <button class="btn btn-ghost" id="btn-cancel-account">Cancel</button>
+          <button class="btn btn-primary" id="btn-save-account">Verify & Save</button>
+        </div>
       </div>
     </div>
   </div>

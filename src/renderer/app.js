@@ -99,10 +99,19 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnOpenAddAccount = document.getElementById('btn-open-add-account');
   const btnCloseAccountModal = document.getElementById('btn-close-account-modal');
   const btnCancelAccount = document.getElementById('btn-cancel-account');
+  const btnCancelAccountWeb = document.getElementById('btn-cancel-account-web');
   const btnSaveAccount = document.getElementById('btn-save-account');
   const cookieInput = document.getElementById('cookie-input');
   const nicknameInput = document.getElementById('nickname-input');
+  const nicknameInputWeb = document.getElementById('nickname-input-web');
   const accountValidateStatus = document.getElementById('account-validate-status');
+  const tabBtnRobloxLogin = document.getElementById('tab-btn-roblox-login');
+  const tabBtnManualCookie = document.getElementById('tab-btn-manual-cookie');
+  const panelRobloxLogin = document.getElementById('panel-roblox-login');
+  const panelManualCookie = document.getElementById('panel-manual-cookie');
+  const btnLaunchRobloxLogin = document.getElementById('btn-launch-roblox-login');
+  const btnLaunchRobloxLoginText = document.getElementById('btn-launch-roblox-login-text');
+  const robloxWebLoginStatus = document.getElementById('roblox-web-login-status');
 
   // Account Select Modal Elements
   const accountSelectModal = document.getElementById('account-select-modal');
@@ -927,16 +936,159 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   };
 
-  btnOpenAddAccount?.addEventListener('click', () => {
-    addAccountModal?.classList.add('active');
-    if (cookieInput) cookieInput.value = '';
-    if (nicknameInput) nicknameInput.value = '';
-    if (accountValidateStatus) accountValidateStatus.textContent = '';
+  // Add Account Method Tabs Switcher
+  tabBtnRobloxLogin?.addEventListener('click', () => {
+    tabBtnRobloxLogin.classList.add('active');
+    tabBtnManualCookie?.classList.remove('active');
+    if (panelRobloxLogin) {
+      panelRobloxLogin.style.display = 'block';
+      panelRobloxLogin.classList.add('active');
+    }
+    if (panelManualCookie) {
+      panelManualCookie.style.display = 'none';
+      panelManualCookie.classList.remove('active');
+    }
   });
 
-  btnCloseAccountModal?.addEventListener('click', () => addAccountModal?.classList.remove('active'));
-  btnCancelAccount?.addEventListener('click', () => addAccountModal?.classList.remove('active'));
+  tabBtnManualCookie?.addEventListener('click', () => {
+    tabBtnManualCookie.classList.add('active');
+    tabBtnRobloxLogin?.classList.remove('active');
+    if (panelManualCookie) {
+      panelManualCookie.style.display = 'block';
+      panelManualCookie.classList.add('active');
+    }
+    if (panelRobloxLogin) {
+      panelRobloxLogin.style.display = 'none';
+      panelRobloxLogin.classList.remove('active');
+    }
+  });
 
+  const resetAddAccountModal = () => {
+    if (cookieInput) cookieInput.value = '';
+    if (nicknameInput) nicknameInput.value = '';
+    if (nicknameInputWeb) nicknameInputWeb.value = '';
+    if (accountValidateStatus) accountValidateStatus.textContent = '';
+    if (robloxWebLoginStatus) robloxWebLoginStatus.textContent = '';
+    if (btnLaunchRobloxLogin) {
+      btnLaunchRobloxLogin.disabled = false;
+      if (btnLaunchRobloxLoginText) btnLaunchRobloxLoginText.textContent = 'Sign In with Roblox';
+    }
+    // Default to Roblox Web Login tab
+    tabBtnRobloxLogin?.click();
+  };
+
+  btnOpenAddAccount?.addEventListener('click', () => {
+    resetAddAccountModal();
+    addAccountModal?.classList.add('active');
+  });
+
+  const closeAccountModalAction = () => {
+    window.api.cancelWebLogin();
+    addAccountModal?.classList.remove('active');
+    resetAddAccountModal();
+  };
+
+  btnCloseAccountModal?.addEventListener('click', closeAccountModalAction);
+  btnCancelAccount?.addEventListener('click', closeAccountModalAction);
+  btnCancelAccountWeb?.addEventListener('click', closeAccountModalAction);
+
+  // METHOD 1: Sign in with Roblox Web Window
+  btnLaunchRobloxLogin?.addEventListener('click', async () => {
+    if (btnLaunchRobloxLogin.disabled) return;
+
+    btnLaunchRobloxLogin.disabled = true;
+    if (btnLaunchRobloxLoginText) btnLaunchRobloxLoginText.textContent = 'Waiting for Roblox login...';
+    if (robloxWebLoginStatus) {
+      robloxWebLoginStatus.style.color = '#ffffff';
+      robloxWebLoginStatus.innerHTML = '<span class="material-icons-round" style="font-size:14px; vertical-align:middle; animation:spin 1s linear infinite;">sync</span> Login window opened. Please complete sign in in the Roblox window...';
+    }
+
+    log('Opened official Roblox web login window...', 'info');
+
+    try {
+      const check = await window.api.loginWeb();
+
+      if (check.cancelled) {
+        if (robloxWebLoginStatus) {
+          robloxWebLoginStatus.style.color = 'var(--t3)';
+          robloxWebLoginStatus.textContent = 'Login window was closed.';
+        }
+        log('Roblox login cancelled or closed by user.', 'info');
+        return;
+      }
+
+      if (!check.valid) {
+        if (robloxWebLoginStatus) {
+          robloxWebLoginStatus.style.color = 'var(--red)';
+          robloxWebLoginStatus.textContent = `Login failed: ${check.error || 'Unable to authenticate session'}`;
+        }
+        log(`Web login authentication failed: ${check.error}`, 'err');
+        return;
+      }
+
+      // Check if this account is already added
+      const existing = (state.accounts || []).find(a => String(a.userId) === String(check.userId));
+      if (existing) {
+        existing.cookie = check.cookie;
+        existing.displayName = check.displayName;
+        existing.avatarUrl = check.avatarUrl;
+        const customNick = (nicknameInputWeb?.value || '').trim();
+        if (customNick) existing.nickname = customNick;
+        await window.api.saveAccounts(state.accounts);
+        renderAccounts();
+        if (accountSelectModal?.classList.contains('active')) renderAccountSelectList();
+        addAccountModal?.classList.remove('active');
+        log(`Refreshed session credentials for ${existing.username} (ID: ${existing.userId})`, 'ok');
+        await window.showAlert({
+          title: 'Session Updated',
+          message: `Refreshed credentials for existing account <b style="color: #ffffff;">${existing.displayName}</b> (@${existing.username})!`,
+          type: 'success',
+          icon: 'verified_user'
+        });
+        return;
+      }
+
+      const customNick = (nicknameInputWeb?.value || '').trim();
+      const newAcc = {
+        id: String(Date.now()),
+        userId: check.userId,
+        username: check.username,
+        displayName: check.displayName,
+        nickname: customNick || check.displayName || check.username,
+        avatarUrl: check.avatarUrl,
+        cookie: check.cookie,
+        addedAt: Date.now()
+      };
+
+      state.accounts.push(newAcc);
+      await window.api.saveAccounts(state.accounts);
+      if (badgeAccountCount) badgeAccountCount.textContent = state.accounts.length;
+      renderAccounts();
+      if (accountSelectModal?.classList.contains('active')) renderAccountSelectList();
+      addAccountModal?.classList.remove('active');
+      log(`Connected account via Roblox Web Login: ${newAcc.username} (ID: ${newAcc.userId})`, 'ok');
+
+      await window.showAlert({
+        title: 'Account Connected',
+        message: `Successfully connected Roblox account <b style="color: #ffffff;">${newAcc.displayName}</b> (@${newAcc.username})!`,
+        type: 'success',
+        icon: 'verified_user'
+      });
+    } catch (err) {
+      if (robloxWebLoginStatus) {
+        robloxWebLoginStatus.style.color = 'var(--red)';
+        robloxWebLoginStatus.textContent = `Error: ${err.message}`;
+      }
+      log(`Roblox login exception: ${err.message}`, 'err');
+    } finally {
+      if (btnLaunchRobloxLogin) {
+        btnLaunchRobloxLogin.disabled = false;
+        if (btnLaunchRobloxLoginText) btnLaunchRobloxLoginText.textContent = 'Sign In with Roblox';
+      }
+    }
+  });
+
+  // METHOD 2: Manual Cookie Verification
   btnSaveAccount?.addEventListener('click', async () => {
     const rawCookie = cookieInput?.value.trim();
     if (!rawCookie) {

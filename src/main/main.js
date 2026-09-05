@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, nativeImage, session } = require('electron');
 const path = require('path');
 const axios = require('axios');
 const nativeHelper = require('./native-helper');
@@ -358,9 +358,10 @@ ipcMain.handle('accounts:save', (event, accounts) => {
   return storage.saveAccounts(accounts);
 });
 
-ipcMain.handle('accounts:validate-cookie', async (event, rawCookie) => {
+async function validateRobloxCookie(rawCookie) {
   if (!rawCookie) return { valid: false, error: 'Empty cookie' };
-  const cookie = rawCookie.trim().startsWith('.ROBLOSECURITY=') ? rawCookie.trim() : `.ROBLOSECURITY=${rawCookie.trim()}`;
+  const trimmed = rawCookie.trim();
+  const cookie = trimmed.startsWith('.ROBLOSECURITY=') ? trimmed : `.ROBLOSECURITY=${trimmed}`;
 
   try {
     const res = await axios.get('https://users.roblox.com/v1/users/authenticated', {
@@ -387,10 +388,112 @@ ipcMain.handle('accounts:validate-cookie', async (event, rawCookie) => {
         cookie
       };
     }
-    return { valid: false, error: 'Invalid response from Roblox' };
+    return { valid: false, error: 'Invalid response from Roblox API' };
   } catch (err) {
     return { valid: false, error: err.response?.data?.message || err.message || 'Cookie expired or invalid' };
   }
+}
+
+ipcMain.handle('accounts:validate-cookie', async (event, rawCookie) => {
+  return validateRobloxCookie(rawCookie);
+});
+
+let loginWebWindow = null;
+
+ipcMain.handle('accounts:login-web', async () => {
+  if (loginWebWindow && !loginWebWindow.isDestroyed()) {
+    loginWebWindow.focus();
+    return { valid: false, error: 'A login window is already open.' };
+  }
+
+  return new Promise((resolve) => {
+    let finished = false;
+    const partition = `roblox_login_${Date.now()}`;
+    const loginSession = session.fromPartition(partition);
+
+    loginWebWindow = new BrowserWindow({
+      width: 490,
+      height: 720,
+      minWidth: 420,
+      minHeight: 560,
+      title: 'Sign In to Roblox - EternityBlox',
+      icon: nativeImage.createFromPath(path.join(__dirname, '..', '..', 'resources', 'icon.ico')),
+      parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : null,
+      modal: false,
+      autoHideMenuBar: true,
+      backgroundColor: '#101014',
+      webPreferences: {
+        partition,
+        nodeIntegration: false,
+        contextIsolation: true
+      }
+    });
+
+    const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+    loginWebWindow.webContents.setUserAgent(userAgent);
+
+    loginWebWindow.loadURL('https://www.roblox.com/login');
+
+    const handleCookieCapture = async (cookieValue) => {
+      if (finished) return;
+      finished = true;
+      try {
+        const validated = await validateRobloxCookie(cookieValue);
+        if (loginWebWindow && !loginWebWindow.isDestroyed()) {
+          loginWebWindow.close();
+        }
+        resolve(validated);
+      } catch (err) {
+        if (loginWebWindow && !loginWebWindow.isDestroyed()) {
+          loginWebWindow.close();
+        }
+        resolve({ valid: false, error: err.message });
+      }
+    };
+
+    const checkCookies = async () => {
+      if (finished) return;
+      try {
+        const cookies = await loginSession.cookies.get({ name: '.ROBLOSECURITY' });
+        if (cookies && cookies.length > 0) {
+          for (const c of cookies) {
+            if (c.value && c.value.length > 50) {
+              await handleCookieCapture(c.value);
+              return;
+            }
+          }
+        }
+      } catch {}
+    };
+
+    loginSession.cookies.on('changed', (event, cookie, cause, removed) => {
+      if (!removed && cookie.name === '.ROBLOSECURITY' && cookie.value && cookie.value.length > 50) {
+        handleCookieCapture(cookie.value);
+      }
+    });
+
+    const pollInterval = setInterval(checkCookies, 1000);
+
+    loginWebWindow.webContents.on('did-navigate', checkCookies);
+    loginWebWindow.webContents.on('did-navigate-in-page', checkCookies);
+
+    loginWebWindow.on('closed', () => {
+      clearInterval(pollInterval);
+      loginWebWindow = null;
+      if (!finished) {
+        finished = true;
+        resolve({ valid: false, cancelled: true });
+      }
+    });
+  });
+});
+
+ipcMain.handle('accounts:cancel-web-login', () => {
+  if (loginWebWindow && !loginWebWindow.isDestroyed()) {
+    loginWebWindow.close();
+    return true;
+  }
+  return false;
 });
 
 // Settings IPC

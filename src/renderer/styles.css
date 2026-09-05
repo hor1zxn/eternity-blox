@@ -1706,6 +1706,107 @@ tbody tr:hover td {
   box-shadow: 0 0 12px rgba(255, 255, 255, 0.5);
 }
 
+/* Modal Subtabs (Sign in with Roblox vs Manual Cookie) */
+.modal-subtabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 16px;
+  background: rgba(0, 0, 0, 0.4);
+  padding: 4px;
+  border-radius: var(--r2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.modal-subtab-btn {
+  flex: 1;
+  padding: 8px 12px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--t3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all var(--dur) var(--smooth);
+}
+
+.modal-subtab-btn .material-icons-round {
+  font-size: 16px;
+}
+
+.modal-subtab-btn:hover {
+  color: var(--t1);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.modal-subtab-btn.active {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.12);
+  font-weight: 700;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 2px 6px rgba(0, 0, 0, 0.3);
+}
+
+/* Roblox Web Login Card */
+.roblox-web-card {
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.04) 0%, rgba(255, 255, 255, 0.01) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  border-radius: var(--r2);
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+}
+
+.roblox-web-card-top {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.roblox-web-icon-wrap {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  color: #ffffff;
+  flex-shrink: 0;
+}
+
+.roblox-web-icon-wrap .material-icons-round {
+  font-size: 20px;
+}
+
+.roblox-web-features {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.roblox-feat-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--t2);
+}
+
+.roblox-feat-item .material-icons-round {
+  font-size: 14px;
+  color: #ffffff;
+  opacity: 0.8;
+}
+
 /* Diagnostic Monospace Logs */
 .log-box {
   background: #050507;
@@ -1980,5 +2081,11 @@ tbody tr:hover td {
   box-shadow: 0 0 22px rgba(239, 68, 68, 0.6);
   transform: translateY(-1px);
 }
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
 
 
