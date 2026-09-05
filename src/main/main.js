@@ -363,35 +363,40 @@ async function validateRobloxCookie(rawCookie) {
   const trimmed = rawCookie.trim();
   const cookie = trimmed.startsWith('.ROBLOSECURITY=') ? trimmed : `.ROBLOSECURITY=${trimmed}`;
 
-  try {
-    const res = await axios.get('https://users.roblox.com/v1/users/authenticated', {
-      headers: { Cookie: cookie },
-      timeout: 8000
-    });
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const res = await axios.get('https://users.roblox.com/v1/users/authenticated', {
+        headers: { Cookie: cookie },
+        timeout: 8000
+      });
 
-    if (res.data && res.data.id) {
-      const { id, name, displayName } = res.data;
-      let avatarUrl = '';
-      try {
-        const thumbRes = await axios.get(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${id}&size=150x150&format=Png&isCircular=true`, { timeout: 5000 });
-        if (thumbRes.data && thumbRes.data.data && thumbRes.data.data[0]) {
-          avatarUrl = thumbRes.data.data[0].imageUrl;
-        }
-      } catch {}
+      if (res.data && res.data.id) {
+        const { id, name, displayName } = res.data;
+        let avatarUrl = '';
+        try {
+          const thumbRes = await axios.get(`https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds=${id}&size=150x150&format=Png&isCircular=true`, { timeout: 5000 });
+          if (thumbRes.data && thumbRes.data.data && thumbRes.data.data[0]) {
+            avatarUrl = thumbRes.data.data[0].imageUrl;
+          }
+        } catch {}
 
-      return {
-        valid: true,
-        userId: id,
-        username: name,
-        displayName: displayName || name,
-        avatarUrl,
-        cookie
-      };
+        return {
+          valid: true,
+          userId: id,
+          username: name,
+          displayName: displayName || name,
+          avatarUrl,
+          cookie
+        };
+      }
+    } catch (err) {
+      if (attempt === 3) {
+        return { valid: false, error: err.response?.data?.message || err.message || 'Cookie expired or invalid' };
+      }
+      await new Promise(r => setTimeout(r, 600));
     }
-    return { valid: false, error: 'Invalid response from Roblox API' };
-  } catch (err) {
-    return { valid: false, error: err.response?.data?.message || err.message || 'Cookie expired or invalid' };
   }
+  return { valid: false, error: 'Invalid response from Roblox API' };
 }
 
 ipcMain.handle('accounts:validate-cookie', async (event, rawCookie) => {
@@ -412,13 +417,13 @@ ipcMain.handle('accounts:login-web', async () => {
     const loginSession = session.fromPartition(partition);
 
     loginWebWindow = new BrowserWindow({
-      width: 490,
-      height: 720,
+      width: 500,
+      height: 740,
       minWidth: 420,
       minHeight: 560,
+      center: true,
       title: 'Sign In to Roblox - EternityBlox',
       icon: nativeImage.createFromPath(path.join(__dirname, '..', '..', 'resources', 'icon.ico')),
-      parent: mainWindow && !mainWindow.isDestroyed() ? mainWindow : null,
       modal: false,
       autoHideMenuBar: true,
       backgroundColor: '#101014',
@@ -431,6 +436,10 @@ ipcMain.handle('accounts:login-web', async () => {
 
     const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
     loginWebWindow.webContents.setUserAgent(userAgent);
+
+    loginWebWindow.webContents.setWindowOpenHandler(() => {
+      return { action: 'allow' };
+    });
 
     loginWebWindow.loadURL('https://www.roblox.com/login');
 
@@ -494,6 +503,11 @@ ipcMain.handle('accounts:cancel-web-login', () => {
     return true;
   }
   return false;
+});
+
+ipcMain.handle('app:restart', () => {
+  app.relaunch();
+  app.exit(0);
 });
 
 // Settings IPC

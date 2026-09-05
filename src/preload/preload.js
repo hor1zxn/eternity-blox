@@ -59,6 +59,7 @@ contextBridge.exposeInMainWorld('api', {
   getSettings: () => ipcRenderer.invoke('settings:get'),
   saveSettings: (settings) => ipcRenderer.invoke('settings:save', settings),
 
-  // Shell
-  openExternal: (url) => ipcRenderer.invoke('shell:open-external', url)
+  // Shell & Lifecycle
+  openExternal: (url) => ipcRenderer.invoke('shell:open-external', url),
+  restartApp: () => ipcRenderer.invoke('app:restart')
 });

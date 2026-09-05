@@ -1077,7 +1077,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (err) {
       if (robloxWebLoginStatus) {
         robloxWebLoginStatus.style.color = 'var(--red)';
-        robloxWebLoginStatus.textContent = `Error: ${err.message}`;
+        if (err.message.includes('No handler registered')) {
+          robloxWebLoginStatus.innerHTML = '<span class="material-icons-round" style="font-size:13px; vertical-align:middle;">info</span> <b>Restart Required:</b> Please restart EternityBlox (run <code>npm start</code>) to load the new web login handler.';
+        } else {
+          robloxWebLoginStatus.textContent = `Error: ${err.message}`;
+        }
       }
       log(`Roblox login exception: ${err.message}`, 'err');
     } finally {
