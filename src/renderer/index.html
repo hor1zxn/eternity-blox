@@ -206,13 +206,15 @@
 
         <!-- Global Place ID input -->
         <div class="card" style="margin-bottom: 18px;">
-          <div style="display: flex; gap: 12px; align-items: center;">
-            <span class="material-icons-round" style="color: var(--t2); font-size: 20px;">videogame_asset</span>
-            <div style="flex: 1;">
-              <div style="font-size: 11px; font-weight: 600; color: var(--t3); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 4px;">DEFAULT PLACE ID / GAME TARGET</div>
-              <input type="text" id="global-game-target" class="field input" placeholder="e.g. 189707 or https://www.roblox.com/games/189707/Natural-Disaster-Survival" style="width: 100%; background: var(--s2); border: 1px solid var(--bd); border-radius: var(--r2); padding: 8px 12px; color: #fff; font-size: 12.5px; outline: none;">
+          <div style="display: flex; gap: 10px; align-items: center;">
+            <div class="input-box" style="flex: 1;">
+              <span class="material-icons-round">sports_esports</span>
+              <input type="text" id="global-game-target" placeholder="Set default Place ID or Game URL (e.g. 189707 or game link)...">
             </div>
-            <button class="btn btn-ghost" id="btn-save-target" style="align-self: flex-end; height: 36px;">Save Target</button>
+            <button class="btn btn-ghost" id="btn-save-target">
+              <span class="material-icons-round">save</span>
+              <span>Save Target</span>
+            </button>
           </div>
         </div>
 
