@@ -1065,76 +1065,343 @@ tbody tr:hover td {
    ========================================================================== */
 .accounts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(310px, 1fr));
   gap: 16px;
 }
 
 .acc-card {
-  background: linear-gradient(180deg, rgba(22, 22, 28, 0.72) 0%, rgba(14, 14, 18, 0.84) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: var(--r);
-  padding: 16px;
+  position: relative;
+  background: linear-gradient(180deg, rgba(22, 22, 28, 0.85) 0%, rgba(11, 11, 15, 0.95) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 16px 18px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 8px 24px rgba(0, 0, 0, 0.4);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(16px);
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
-  min-height: 180px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 4px 18px rgba(0, 0, 0, 0.32);
-  transition: all var(--dur) var(--smooth);
+}
+
+.acc-card-glow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(255, 255, 255, 0.08), transparent);
+  pointer-events: none;
+  transition: all 0.3s ease;
 }
 
 .acc-card:hover {
-  border-color: rgba(255, 255, 255, 0.16);
-  transform: translateY(-2px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 8px 24px rgba(0, 0, 0, 0.45);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-3px);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.15), 0 14px 32px rgba(0, 0, 0, 0.6);
+}
+
+.acc-card:hover .acc-card-glow {
+  background: radial-gradient(ellipse 90% 60% at 50% -20%, rgba(255, 255, 255, 0.14), transparent);
 }
 
 .acc-card.is-running {
   border-color: rgba(34, 197, 94, 0.35);
-  box-shadow: inset 0 1px 0 rgba(34, 197, 94, 0.22), 0 4px 18px rgba(34, 197, 94, 0.12);
+  box-shadow: inset 0 1px 0 rgba(34, 197, 94, 0.2), 0 8px 28px rgba(34, 197, 94, 0.1);
 }
 
+.acc-card.is-running .acc-card-glow {
+  background: radial-gradient(ellipse 80% 50% at 50% -20%, rgba(34, 197, 94, 0.18), transparent);
+}
+
+.acc-card.is-running:hover {
+  border-color: rgba(34, 197, 94, 0.5);
+  box-shadow: inset 0 1px 0 rgba(34, 197, 94, 0.3), 0 14px 36px rgba(34, 197, 94, 0.18);
+}
+
+.acc-card-inner {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+/* Head */
 .acc-head {
   display: flex;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 12px;
+  gap: 14px;
 }
 
-.acc-av {
-  width: 48px;
-  height: 48px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.05);
-  overflow: hidden;
+.acc-av-wrap {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1.5px solid rgba(255, 255, 255, 0.12);
+  overflow: visible;
   flex-shrink: 0;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
 
-.acc-av img {
+.acc-av-img {
   width: 100%;
   height: 100%;
+  border-radius: 10.5px;
   object-fit: cover;
+  display: block;
 }
 
-.acc-info h4 {
+.av-status-dot {
+  position: absolute;
+  bottom: -2px;
+  right: -2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  border: 2px solid #14141a;
+  transition: all 0.2s ease;
+}
+
+.av-status-dot.live {
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  animation: pulse-dot 2s infinite ease-in-out;
+}
+
+.acc-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.acc-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.acc-display-name {
+  font-family: 'Montserrat', sans-serif;
   font-size: 14px;
   font-weight: 700;
-  color: #fff;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   letter-spacing: -0.01em;
 }
 
-.acc-info span {
+.acc-handle {
+  font-family: 'Montserrat', sans-serif;
   font-size: 11.5px;
   color: var(--t3);
-  display: block;
-  margin-top: 1px;
+  font-weight: 500;
+  margin-top: 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
+/* Status Tag */
+.acc-status-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+}
+
+.acc-status-tag.standby {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--t3);
+}
+
+.acc-status-tag.running {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.32);
+  color: var(--green);
+  box-shadow: 0 0 10px rgba(34, 197, 94, 0.15);
+}
+
+.acc-status-tag .tag-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--green);
+  animation: pulse-dot 2s infinite ease-in-out;
+}
+
+/* Body / Metadata Capsule */
+.acc-body {
+  margin: 14px 0 16px 0;
+  padding: 10px 12px;
+  background: rgba(0, 0, 0, 0.32);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+}
+
+.acc-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.acc-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--t2);
+  cursor: pointer;
+  padding: 3px 6px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.acc-meta-item:hover {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.acc-meta-item .meta-icon {
+  font-size: 13px;
+  color: var(--t3);
+}
+
+.acc-meta-item:hover .meta-icon {
+  color: var(--t1);
+}
+
+.acc-meta-item .meta-copy {
+  font-size: 12px;
+  color: var(--t3);
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
+.acc-meta-item:hover .meta-copy {
+  opacity: 1;
+}
+
+.acc-meta-item.target {
+  cursor: default;
+  max-width: 140px;
+}
+
+.acc-meta-item.target:hover {
+  background: transparent;
+  color: var(--t2);
+}
+
+.acc-meta-item.target .meta-val {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Foot & Action Buttons */
 .acc-foot {
   display: flex;
+  align-items: center;
   gap: 8px;
   margin-top: auto;
+}
+
+.btn-acc-action {
+  flex: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  border: none;
+}
+
+.btn-acc-action .material-icons-round {
+  font-size: 15px;
+}
+
+.btn-acc-action.primary {
+  background: #ffffff;
+  color: #000000;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 2px 10px rgba(255, 255, 255, 0.25);
+}
+
+.btn-acc-action.primary:hover {
+  background: #f0f0f2;
+  box-shadow: inset 0 1px 0 #ffffff, 0 4px 18px rgba(255, 255, 255, 0.45);
+  transform: translateY(-1px);
+}
+
+.btn-acc-action.danger {
+  background: rgba(239, 68, 68, 0.14);
+  border: 1px solid rgba(239, 68, 68, 0.38);
+  color: #ef4444;
+  box-shadow: 0 2px 10px rgba(239, 68, 68, 0.12);
+}
+
+.btn-acc-action.danger:hover {
+  background: rgba(239, 68, 68, 0.24);
+  border-color: rgba(239, 68, 68, 0.6);
+  color: #ffffff;
+  box-shadow: 0 4px 18px rgba(239, 68, 68, 0.35);
+  transform: translateY(-1px);
+}
+
+.acc-action-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn-acc-tool {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--t2);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-acc-tool .material-icons-round {
+  font-size: 16px;
+}
+
+.btn-acc-tool:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #ffffff;
+}
+
+.btn-acc-tool.delete:hover {
+  background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(239, 68, 68, 0.35);
+  color: #ef4444;
 }
 
 /* ==========================================================================

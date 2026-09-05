@@ -586,6 +586,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
+  window.openProfile = (userId) => {
+    if (userId && userId !== 'N/A') {
+      window.api.openExternal(`https://www.roblox.com/users/${userId}/profile`);
+    }
+  };
+
+  window.copyUserId = (userId, e) => {
+    if (e) e.stopPropagation();
+    if (!userId || userId === 'N/A') return;
+    navigator.clipboard.writeText(String(userId));
+    log(`Copied Roblox User ID: ${userId}`, 'ok');
+  };
+
   function renderAccounts() {
     if (!accountsContainer) return;
     if (state.accounts.length === 0) {
@@ -593,42 +606,83 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
+    const currentTarget = getTargetGame();
+    const targetDisplay = currentTarget ? (currentTarget.length > 20 ? currentTarget.slice(0, 17) + '...' : currentTarget) : 'Home / Default';
+
     accountsContainer.innerHTML = state.accounts.map(acc => {
       const avatarSrc = acc.avatarUrl || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="%2352525b"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>';
       const activeInst = (state.instances || []).find(inst => String(inst.accountId) === String(acc.id) && (state.runningPids.length === 0 || state.runningPids.includes(inst.pid)));
       const isRunning = Boolean(activeInst);
+      const displayName = acc.nickname || acc.displayName || acc.username || 'Roblox User';
 
       return `
         <div class="acc-card ${isRunning ? 'is-running' : ''}">
-          <div>
+          <div class="acc-card-glow"></div>
+          
+          <div class="acc-card-inner">
             <div class="acc-head">
-              <div class="acc-av">
-                <img src="${avatarSrc}" alt="Avatar">
+              <div class="acc-av-wrap">
+                <img src="${avatarSrc}" alt="Avatar" class="acc-av-img">
+                <span class="av-status-dot ${isRunning ? 'live' : ''}" title="${isRunning ? 'Active Instance Running' : 'Standby'}"></span>
               </div>
-              <div class="acc-info" style="flex: 1;">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 6px;">
-                  <h4>${acc.nickname || acc.displayName || acc.username || 'Roblox User'}</h4>
-                  ${isRunning ? `<span class="badge b-white" style="color:var(--green); border-color:rgba(34,197,94,0.3); font-size:10px;"><span class="tb-dot" style="background:var(--green); width:5px; height:5px; margin-right:4px;"></span>PID ${activeInst.pid}</span>` : ''}
+
+              <div class="acc-info">
+                <div class="acc-title-row">
+                  <h4 class="acc-display-name" title="${displayName}">${displayName}</h4>
+                  ${isRunning ? `
+                    <span class="acc-status-tag running">
+                      <span class="tag-dot"></span>
+                      <span>PID ${activeInst.pid}</span>
+                    </span>
+                  ` : `
+                    <span class="acc-status-tag standby">
+                      <span>READY</span>
+                    </span>
+                  `}
                 </div>
-                <span>@${acc.username || 'unknown'} • ID: ${acc.userId || 'N/A'}</span>
+                <div class="acc-handle">@${acc.username || 'unknown'}</div>
               </div>
             </div>
-          </div>
-          <div class="acc-foot">
-            ${isRunning ? `
-              <button class="btn btn-danger btn-sm" style="flex: 1;" onclick="window.killSpecificPid(${activeInst.pid})" title="Kill this specific instance">
-                <span class="material-icons-round">power_settings_new</span>
-                <span>Kill Instance (${activeInst.pid})</span>
-              </button>
-            ` : `
-              <button class="btn btn-primary btn-sm" style="flex: 1;" onclick="window.launchAccount('${acc.id}')">
-                <span class="material-icons-round">play_arrow</span>
-                <span>Launch</span>
-              </button>
-            `}
-            <button class="btn btn-ghost btn-sm" title="Remove account" onclick="window.removeAccount('${acc.id}')">
-              <span class="material-icons-round">delete</span>
-            </button>
+
+            <div class="acc-body">
+              <div class="acc-meta-row">
+                <div class="acc-meta-item" title="Click to copy User ID" onclick="window.copyUserId('${acc.userId || ''}', event)">
+                  <span class="material-icons-round meta-icon">tag</span>
+                  <span class="meta-val">${acc.userId || 'N/A'}</span>
+                  <span class="material-icons-round meta-copy">content_copy</span>
+                </div>
+
+                <div class="acc-meta-item target" title="Current Engine Target">
+                  <span class="material-icons-round meta-icon">sports_esports</span>
+                  <span class="meta-val">${targetDisplay}</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="acc-foot">
+              ${isRunning ? `
+                <button class="btn-acc-action danger" onclick="window.killSpecificPid(${activeInst.pid})" title="Kill Instance ${activeInst.pid}">
+                  <span class="material-icons-round">power_settings_new</span>
+                  <span>TERMINATE</span>
+                </button>
+              ` : `
+                <button class="btn-acc-action primary" onclick="window.launchAccount('${acc.id}')" title="Launch Client">
+                  <span class="material-icons-round">play_arrow</span>
+                  <span>LAUNCH</span>
+                </button>
+              `}
+              
+              <div class="acc-action-tools">
+                ${acc.userId ? `
+                  <button class="btn-acc-tool" title="Open Roblox Profile in Browser" onclick="window.openProfile('${acc.userId}')">
+                    <span class="material-icons-round">open_in_new</span>
+                  </button>
+                ` : ''}
+                <button class="btn-acc-tool delete" title="Remove account" onclick="window.removeAccount('${acc.id}')">
+                  <span class="material-icons-round">delete_outline</span>
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       `;
