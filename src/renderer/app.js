@@ -285,11 +285,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       state.liveInfo = live;
       if (live.tirexRecommendedHash) {
         state.recommendedVersion = live.tirexRecommendedHash;
-        if (recommendedVer) recommendedVer.textContent = live.tirexRecommendedHash;
       }
-
-      if (currentLiveVer) currentLiveVer.textContent = live.liveClientVersion || '0.737.x';
-      if (currentLiveHash) currentLiveHash.textContent = live.liveHash || 'version-e7d81637d42c4b23';
       log(`Live Roblox: ${live.liveClientVersion || 'Online'} (${live.liveHash || ''})`);
     } catch (err) {
       log(`Failed to fetch live version info: ${err.message}`, 'err');
@@ -663,7 +659,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   btnSaveTarget?.addEventListener('click', () => {
     const t = (globalGameTarget?.value || '').trim();
     window.api.saveSettings({ gameTarget: t });
-    if (quickPlaceId) quickPlaceId.value = t;
+    if (cockpitPlaceId) cockpitPlaceId.value = t;
     log(`Saved target place: ${t || 'Home'}`, 'ok');
   });
 
