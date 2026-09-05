@@ -51,6 +51,8 @@ contextBridge.exposeInMainWorld('api', {
   // Accounts
   listAccounts: () => ipcRenderer.invoke('accounts:list'),
   saveAccounts: (accounts) => ipcRenderer.invoke('accounts:save', accounts),
+  addAccountManual: (payload) => ipcRenderer.invoke('accounts:add-manual', payload),
+  deleteAccount: (id) => ipcRenderer.invoke('accounts:delete', id),
   validateCookie: (cookie) => ipcRenderer.invoke('accounts:validate-cookie', cookie),
   loginWeb: () => ipcRenderer.invoke('accounts:login-web'),
   cancelWebLogin: () => ipcRenderer.invoke('accounts:cancel-web-login'),

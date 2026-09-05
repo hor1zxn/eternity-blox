@@ -58,7 +58,8 @@ function createWindow() {
     webPreferences: {
       preload: path.join(__dirname, '..', 'preload', 'preload.js'),
       nodeIntegration: false,
-      contextIsolation: true
+      contextIsolation: true,
+      sandbox: true
     }
   });
 
@@ -77,8 +78,21 @@ function createWindow() {
     });
   }
 
+  // Security: Prevent navigating away from the local application
+  mainWindow.webContents.on('will-navigate', (event) => {
+    event.preventDefault();
+  });
+
+  // Security: Only allow trusted external web links to open in system browser
   mainWindow.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    try {
+      const parsed = new URL(url);
+      if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
+        shell.openExternal(url);
+      }
+    } catch (e) {
+      console.warn('[Security] Blocked invalid external URL:', url);
+    }
     return { action: 'deny' };
   });
 
@@ -220,9 +234,13 @@ ipcMain.handle('launcher:spawn', async (event, options) => {
   const settings = storage.loadSettings();
   const activeVersion = options.versionHash || settings.activeVersion;
   const target = options.target || settings.gameTarget;
+
+  // Zero-Trust Security: Resolve account cookie directly in main Node process
+  const secureCookie = options.cookie || (options.accountId ? storage.getAccountCookie(options.accountId) : null);
+
   const res = await launchRobloxInstance({
     versionHash: activeVersion,
-    cookie: options.cookie,
+    cookie: secureCookie,
     target
   });
 
@@ -349,13 +367,18 @@ ipcMain.handle('native:arrange-windows', (event, mode = 'grid') => {
   return true;
 });
 
-// Accounts IPC
+// Accounts IPC - Zero-Trust Cookie Model
+// The renderer process is NEVER sent raw .ROBLOSECURITY cookies
 ipcMain.handle('accounts:list', () => {
-  return storage.loadAccounts();
+  return storage.getSanitizedAccounts();
 });
 
 ipcMain.handle('accounts:save', (event, accounts) => {
   return storage.saveAccounts(accounts);
+});
+
+ipcMain.handle('accounts:delete', (event, accountId) => {
+  return storage.deleteAccount(accountId);
 });
 
 async function validateRobloxCookie(rawCookie) {
@@ -400,7 +423,40 @@ async function validateRobloxCookie(rawCookie) {
 }
 
 ipcMain.handle('accounts:validate-cookie', async (event, rawCookie) => {
-  return validateRobloxCookie(rawCookie);
+  const check = await validateRobloxCookie(rawCookie);
+  if (check.valid) {
+    // Return sanitized status (without cookie) to validate credentials safely
+    const { cookie, ...sanitized } = check;
+    return sanitized;
+  }
+  return check;
+});
+
+ipcMain.handle('accounts:add-manual', async (event, { rawCookie, nickname }) => {
+  const check = await validateRobloxCookie(rawCookie);
+  if (!check.valid) {
+    return check;
+  }
+
+  const accountData = {
+    id: String(Date.now()),
+    userId: check.userId,
+    username: check.username,
+    displayName: check.displayName,
+    nickname: (nickname || '').trim() || check.displayName || check.username,
+    avatarUrl: check.avatarUrl,
+    addedAt: Date.now()
+  };
+
+  storage.addOrUpdateAccount(accountData, check.cookie);
+
+  return {
+    valid: true,
+    account: {
+      ...accountData,
+      hasCookie: true
+    }
+  };
 });
 
 let loginWebWindow = null;
@@ -430,15 +486,54 @@ ipcMain.handle('accounts:login-web', async () => {
       webPreferences: {
         partition,
         nodeIntegration: false,
-        contextIsolation: true
+        contextIsolation: true,
+        sandbox: true
       }
     });
 
     const userAgent = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
     loginWebWindow.webContents.setUserAgent(userAgent);
 
-    loginWebWindow.webContents.setWindowOpenHandler(() => {
-      return { action: 'allow' };
+    // Security: Domain Whitelist Guard - Only allow official Roblox and auth challenge domains
+    const isAllowedAuthDomain = (navUrl) => {
+      try {
+        const parsed = new URL(navUrl);
+        if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') return false;
+        const host = parsed.hostname.toLowerCase();
+        return (
+          host.endsWith('.roblox.com') ||
+          host === 'roblox.com' ||
+          host.endsWith('.rbxcdn.com') ||
+          host.endsWith('.arkoselabs.com') ||
+          host.endsWith('.funcaptcha.com') ||
+          host.endsWith('.google.com') ||
+          host.endsWith('.apple.com')
+        );
+      } catch {
+        return false;
+      }
+    };
+
+    loginWebWindow.webContents.on('will-navigate', (event, navUrl) => {
+      if (!isAllowedAuthDomain(navUrl)) {
+        console.warn('[Security] Blocked unauthorized navigation in login window:', navUrl);
+        event.preventDefault();
+      }
+    });
+
+    loginWebWindow.webContents.on('will-redirect', (event, navUrl) => {
+      if (!isAllowedAuthDomain(navUrl)) {
+        console.warn('[Security] Blocked unauthorized redirect in login window:', navUrl);
+        event.preventDefault();
+      }
+    });
+
+    loginWebWindow.webContents.setWindowOpenHandler(({ url }) => {
+      if (isAllowedAuthDomain(url)) {
+        return { action: 'allow' };
+      }
+      console.warn('[Security] Blocked unauthorized popup in login window:', url);
+      return { action: 'deny' };
     });
 
     loginWebWindow.loadURL('https://www.roblox.com/login');
@@ -448,10 +543,44 @@ ipcMain.handle('accounts:login-web', async () => {
       finished = true;
       try {
         const validated = await validateRobloxCookie(cookieValue);
+
+        // Security: Immediately wipe session storage, cookies, and cache from memory
+        try {
+          await loginSession.clearStorageData();
+          await loginSession.clearCache();
+        } catch (clearErr) {
+          console.warn('[Security] Error clearing login partition cache:', clearErr.message);
+        }
+
         if (loginWebWindow && !loginWebWindow.isDestroyed()) {
           loginWebWindow.close();
         }
-        resolve(validated);
+
+        if (validated.valid) {
+          const accountData = {
+            id: String(Date.now()),
+            userId: validated.userId,
+            username: validated.username,
+            displayName: validated.displayName,
+            nickname: validated.displayName || validated.username,
+            avatarUrl: validated.avatarUrl,
+            addedAt: Date.now()
+          };
+
+          // Save account securely with Windows DPAPI directly in main process
+          storage.addOrUpdateAccount(accountData, validated.cookie);
+
+          // Return sanitized account (NO raw cookie sent to renderer!)
+          resolve({
+            valid: true,
+            account: {
+              ...accountData,
+              hasCookie: true
+            }
+          });
+        } else {
+          resolve(validated);
+        }
       } catch (err) {
         if (loginWebWindow && !loginWebWindow.isDestroyed()) {
           loginWebWindow.close();
@@ -486,9 +615,13 @@ ipcMain.handle('accounts:login-web', async () => {
     loginWebWindow.webContents.on('did-navigate', checkCookies);
     loginWebWindow.webContents.on('did-navigate-in-page', checkCookies);
 
-    loginWebWindow.on('closed', () => {
+    loginWebWindow.on('closed', async () => {
       clearInterval(pollInterval);
       loginWebWindow = null;
+      try {
+        await loginSession.clearStorageData();
+        await loginSession.clearCache();
+      } catch {}
       if (!finished) {
         finished = true;
         resolve({ valid: false, cancelled: true });
@@ -519,6 +652,16 @@ ipcMain.handle('settings:save', (event, settings) => {
   return storage.saveSettings(settings);
 });
 
+// Security: Enforce strict URL protocol validation before opening in system shell
 ipcMain.handle('shell:open-external', (event, url) => {
-  shell.openExternal(url);
+  try {
+    const parsed = new URL(url);
+    if (parsed.protocol === 'https:' || parsed.protocol === 'http:') {
+      shell.openExternal(url);
+    } else {
+      console.warn('[Security] Blocked non-http(s) protocol in shell:open-external:', url);
+    }
+  } catch (e) {
+    console.warn('[Security] Invalid URL passed to shell:open-external:', url);
+  }
 });

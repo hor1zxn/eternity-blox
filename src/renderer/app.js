@@ -884,9 +884,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const target = getTargetGame();
     log(`Launching account ${acc.nickname || acc.username}${target ? ' into ' + target : ' into Home'} with build ${state.activeVersion || 'default'}...`);
     try {
+      // Zero-Trust: Main process securely resolves cookie from DPAPI storage via accountId
       const res = await window.api.launchInstance({
         versionHash: state.activeVersion,
-        cookie: acc.cookie,
         target,
         accountId: acc.id,
         username: acc.username,
@@ -927,12 +927,15 @@ document.addEventListener('DOMContentLoaded', async () => {
       icon: 'person_remove'
     });
     if (confirmed) {
-      state.accounts = state.accounts.filter(a => a.id !== id);
-      await window.api.saveAccounts(state.accounts);
-      if (badgeAccountCount) badgeAccountCount.textContent = state.accounts.length;
-      renderAccounts();
-      if (accountSelectModal?.classList.contains('active')) renderAccountSelectList();
-      log('Account removed.', 'ok');
+      try {
+        state.accounts = await window.api.deleteAccount(id);
+        if (badgeAccountCount) badgeAccountCount.textContent = state.accounts.length;
+        renderAccounts();
+        if (accountSelectModal?.classList.contains('active')) renderAccountSelectList();
+        log('Account removed and credentials wiped.', 'ok');
+      } catch (err) {
+        log(`Failed to remove account: ${err.message}`, 'err');
+      }
     }
   };
 
@@ -1026,51 +1029,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         return;
       }
 
-      // Check if this account is already added
-      const existing = (state.accounts || []).find(a => String(a.userId) === String(check.userId));
-      if (existing) {
-        existing.cookie = check.cookie;
-        existing.displayName = check.displayName;
-        existing.avatarUrl = check.avatarUrl;
-        const customNick = (nicknameInputWeb?.value || '').trim();
-        if (customNick) existing.nickname = customNick;
-        await window.api.saveAccounts(state.accounts);
-        renderAccounts();
-        if (accountSelectModal?.classList.contains('active')) renderAccountSelectList();
-        addAccountModal?.classList.remove('active');
-        log(`Refreshed session credentials for ${existing.username} (ID: ${existing.userId})`, 'ok');
-        await window.showAlert({
-          title: 'Session Updated',
-          message: `Refreshed credentials for existing account <b style="color: #ffffff;">${existing.displayName}</b> (@${existing.username})!`,
-          type: 'success',
-          icon: 'verified_user'
-        });
-        return;
+      // If custom nickname was set in the modal, update it
+      const customNick = (nicknameInputWeb?.value || '').trim();
+      if (customNick && check.account) {
+        const currentList = await window.api.listAccounts();
+        const found = currentList.find(a => String(a.id) === String(check.account.id) || String(a.userId) === String(check.account.userId));
+        if (found) {
+          found.nickname = customNick;
+          await window.api.saveAccounts(currentList);
+        }
       }
 
-      const customNick = (nicknameInputWeb?.value || '').trim();
-      const newAcc = {
-        id: String(Date.now()),
-        userId: check.userId,
-        username: check.username,
-        displayName: check.displayName,
-        nickname: customNick || check.displayName || check.username,
-        avatarUrl: check.avatarUrl,
-        cookie: check.cookie,
-        addedAt: Date.now()
-      };
-
-      state.accounts.push(newAcc);
-      await window.api.saveAccounts(state.accounts);
-      if (badgeAccountCount) badgeAccountCount.textContent = state.accounts.length;
-      renderAccounts();
-      if (accountSelectModal?.classList.contains('active')) renderAccountSelectList();
+      await loadAccounts();
       addAccountModal?.classList.remove('active');
-      log(`Connected account via Roblox Web Login: ${newAcc.username} (ID: ${newAcc.userId})`, 'ok');
+      log(`Connected account via Roblox Web Login: ${check.account.username} (ID: ${check.account.userId})`, 'ok');
 
       await window.showAlert({
-        title: 'Account Connected',
-        message: `Successfully connected Roblox account <b style="color: #ffffff;">${newAcc.displayName}</b> (@${newAcc.username})!`,
+        title: 'Account Connected & Secured',
+        message: `Successfully connected Roblox account <b style="color: #ffffff;">${check.account.displayName}</b> (@${check.account.username})!<br><span style="font-size:12px; color:var(--t3); display:inline-block; margin-top:4px;">Credentials encrypted with Windows DPAPI.</span>`,
         type: 'success',
         icon: 'verified_user'
       });
@@ -1092,7 +1068,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // METHOD 2: Manual Cookie Verification
+  // METHOD 2: Manual Cookie Verification & DPAPI Storage
   btnSaveAccount?.addEventListener('click', async () => {
     const rawCookie = cookieInput?.value.trim();
     if (!rawCookie) {
@@ -1102,33 +1078,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     accountValidateStatus.style.color = '#ffffff';
-    accountValidateStatus.textContent = 'Validating cookie with Roblox API...';
+    accountValidateStatus.textContent = 'Validating cookie & securing with Windows DPAPI...';
 
-    const check = await window.api.validateCookie(rawCookie);
-    if (!check.valid) {
+    const nickname = (nicknameInput?.value || '').trim();
+
+    try {
+      const result = await window.api.addAccountManual({ rawCookie, nickname });
+
+      // Zero-Trust Security: Immediately wipe raw cookie input field from DOM memory
+      if (cookieInput) cookieInput.value = '';
+
+      if (!result.valid) {
+        accountValidateStatus.style.color = 'var(--red)';
+        accountValidateStatus.textContent = `Validation failed: ${result.error}`;
+        return;
+      }
+
+      await loadAccounts();
+      addAccountModal?.classList.remove('active');
+      log(`Added and encrypted account: ${result.account.username} (ID: ${result.account.userId})`, 'ok');
+
+      await window.showAlert({
+        title: 'Account Secured',
+        message: `Successfully added and encrypted account <b style="color: #ffffff;">${result.account.displayName}</b> (@${result.account.username})!<br><span style="font-size:12px; color:var(--t3); display:inline-block; margin-top:4px;">Credentials are protected by Windows DPAPI hardware-bound encryption.</span>`,
+        type: 'success',
+        icon: 'verified_user'
+      });
+    } catch (err) {
+      if (cookieInput) cookieInput.value = '';
       accountValidateStatus.style.color = 'var(--red)';
-      accountValidateStatus.textContent = `Validation failed: ${check.error}`;
-      return;
+      accountValidateStatus.textContent = `Error: ${err.message}`;
     }
-
-    const newAcc = {
-      id: String(Date.now()),
-      userId: check.userId,
-      username: check.username,
-      displayName: check.displayName,
-      nickname: nicknameInput?.value.trim() || check.displayName || check.username,
-      avatarUrl: check.avatarUrl,
-      cookie: check.cookie,
-      addedAt: Date.now()
-    };
-
-    state.accounts.push(newAcc);
-    await window.api.saveAccounts(state.accounts);
-    if (badgeAccountCount) badgeAccountCount.textContent = state.accounts.length;
-    renderAccounts();
-    if (accountSelectModal?.classList.contains('active')) renderAccountSelectList();
-    addAccountModal?.classList.remove('active');
-    log(`Added account: ${newAcc.username} (ID: ${newAcc.userId})`, 'ok');
   });
 
   btnLaunchAllAccounts?.addEventListener('click', async () => {
@@ -1147,9 +1127,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       const acc = state.accounts[i];
       if (i > 0) await new Promise(r => setTimeout(r, 1400));
       try {
+        // Zero-Trust: Main process resolves cookie from DPAPI via accountId
         await window.api.launchInstance({
           versionHash: state.activeVersion,
-          cookie: acc.cookie,
           target,
           accountId: acc.id,
           username: acc.username,
