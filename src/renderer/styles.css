@@ -602,6 +602,65 @@ button:focus-visible, .nav-item:focus-visible {
   color: var(--red);
 }
 
+/* Cockpit Live Instances Chips */
+.cockpit-instances-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.cockpit-instance-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(34, 197, 94, 0.09);
+  border: 1px solid rgba(34, 197, 94, 0.28);
+  border-radius: 6px;
+  padding: 3px 8px;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.cockpit-instance-chip .chip-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 6px var(--green);
+  animation: pulse-dot 2s infinite ease-in-out;
+}
+
+.cockpit-instance-chip .chip-name {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.cockpit-instance-chip .chip-kill-btn {
+  background: transparent;
+  border: none;
+  color: var(--t3);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 3px;
+  padding: 1px 3px;
+  font-size: 11px;
+  line-height: 1;
+  transition: all var(--dur) var(--smooth);
+}
+
+.cockpit-instance-chip .chip-kill-btn:hover {
+  background: rgba(239, 68, 68, 0.25);
+  color: var(--red);
+}
+
 /* --------------------------------------------------------------------------
    Sub-Deck Segmented Tabs
    -------------------------------------------------------------------------- */
@@ -1027,6 +1086,11 @@ tbody tr:hover td {
   border-color: rgba(255, 255, 255, 0.16);
   transform: translateY(-2px);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08), 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.acc-card.is-running {
+  border-color: rgba(34, 197, 94, 0.35);
+  box-shadow: inset 0 1px 0 rgba(34, 197, 94, 0.22), 0 4px 18px rgba(34, 197, 94, 0.12);
 }
 
 .acc-head {

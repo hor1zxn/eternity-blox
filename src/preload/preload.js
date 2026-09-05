@@ -25,6 +25,12 @@ contextBridge.exposeInMainWorld('api', {
   launchMultiple: (payload) => ipcRenderer.invoke('launcher:spawn-multiple', payload),
   killAllRoblox: () => ipcRenderer.invoke('launcher:kill-all'),
   killPid: (pid) => ipcRenderer.invoke('launcher:kill-pid', pid),
+  listInstances: () => ipcRenderer.invoke('instances:list'),
+  onInstancesUpdated: (cb) => {
+    const listener = (event, instances) => cb(instances);
+    ipcRenderer.on('instances-updated', listener);
+    return () => ipcRenderer.removeListener('instances-updated', listener);
+  },
 
   // Mixer & Native
   setVolume: (percent) => ipcRenderer.invoke('native:set-volume', percent),

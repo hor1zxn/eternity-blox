@@ -45,20 +45,87 @@ async function getAuthTicket(cookie) {
   }
 }
 
-function parsePlaceId(target) {
+function parseGameTarget(target) {
   if (!target) return null;
   target = String(target).trim();
-  if (/^\d+$/.test(target)) return target;
+  if (!target) return null;
 
-  // Match roblox.com/games/123456/...
-  const match = target.match(/\/games\/(\d+)/i);
-  if (match) return match[1];
+  // 1. Raw numeric placeId
+  if (/^\d+$/.test(target)) {
+    return {
+      placeId: target,
+      requestType: 'RequestGame'
+    };
+  }
 
-  // Match placeId=123456
-  const matchParam = target.match(/[?&]placeId=(\d+)/i);
-  if (matchParam) return matchParam[1];
+  // 2. Extract placeId from /games/123456/... or placeId=123456
+  let placeId = null;
+  const matchPath = target.match(/\/games\/(\d+)/i);
+  if (matchPath) placeId = matchPath[1];
+  if (!placeId) {
+    const matchParam = target.match(/[?&]placeId=(\d+)/i);
+    if (matchParam) placeId = matchParam[1];
+  }
 
-  return null;
+  // 3. Extract private server linkCode or accessCode
+  const linkCodeMatch = target.match(/[?&](?:privateServerLinkCode|linkCode)=([a-zA-Z0-9_-]+)/i);
+  const accessCodeMatch = target.match(/[?&]accessCode=([a-zA-Z0-9_-]+)/i);
+
+  // 4. Extract gameInstanceId or jobId
+  const jobMatch = target.match(/[?&](?:gameInstanceId|gameId|jobId)=([a-zA-Z0-9_-]+)/i);
+
+  if (!placeId) {
+    const digitMatch = target.match(/\b(\d{5,12})\b/);
+    if (digitMatch) placeId = digitMatch[1];
+  }
+
+  if (!placeId) return null;
+
+  if (linkCodeMatch) {
+    return {
+      placeId,
+      linkCode: linkCodeMatch[1],
+      requestType: 'RequestPrivateGame'
+    };
+  }
+
+  if (accessCodeMatch) {
+    return {
+      placeId,
+      accessCode: accessCodeMatch[1],
+      requestType: 'RequestPrivateGame'
+    };
+  }
+
+  if (jobMatch) {
+    return {
+      placeId,
+      gameId: jobMatch[1],
+      requestType: 'RequestGameJob'
+    };
+  }
+
+  return {
+    placeId,
+    requestType: 'RequestGame'
+  };
+}
+
+function buildPlaceLauncherUrl(parsedTarget) {
+  if (!parsedTarget || !parsedTarget.placeId) return '';
+  const { placeId, requestType, linkCode, accessCode, gameId } = parsedTarget;
+
+  if (requestType === 'RequestPrivateGame' && linkCode) {
+    return `https://assetgame.roblox.com/game/placelauncher.ashx?request=RequestPrivateGame&placeId=${placeId}&linkCode=${linkCode}`;
+  }
+  if (requestType === 'RequestPrivateGame' && accessCode) {
+    return `https://assetgame.roblox.com/game/placelauncher.ashx?request=RequestPrivateGame&placeId=${placeId}&accessCode=${accessCode}`;
+  }
+  if (requestType === 'RequestGameJob' && gameId) {
+    return `https://assetgame.roblox.com/game/placelauncher.ashx?request=RequestGameJob&placeId=${placeId}&gameId=${gameId}`;
+  }
+
+  return `https://assetgame.roblox.com/game/placelauncher.ashx?request=RequestGame&placeId=${placeId}&isPlayTogetherGame=false`;
 }
 
 function resolveExecutable(versionHash) {
@@ -97,22 +164,18 @@ async function launchRobloxInstance({ versionHash = null, cookie = null, target 
     ticket = await getAuthTicket(cookie);
   }
 
-  const placeId = parsePlaceId(target);
+  const parsedTarget = parseGameTarget(target);
+  const launcherUrl = buildPlaceLauncherUrl(parsedTarget);
   const launchTime = Date.now();
   const browserId = Math.floor(1000000000000 + Math.random() * 9000000000000);
 
   let launchArg = '--app';
-  if (ticket || placeId) {
-    let launcherUrl = '';
-    if (placeId) {
-      launcherUrl = `https://assetgame.roblox.com/game/placelauncher.ashx?request=RequestGame&placeId=${placeId}&isPlayTogetherGame=false`;
-    }
-
-    if (launcherUrl) {
-      launchArg = `roblox-player:1+launchmode:play+gameinfo:${ticket || ''}+launchtime:${launchTime}+placelauncherurl:${encodeURIComponent(launcherUrl)}+browsertrackerid:${browserId}+robloxLocale:en_us+gameLocale:en_us+channel:+LaunchExp:InApp`;
-    } else {
-      launchArg = `roblox-player:1+launchmode:app+gameinfo:${ticket || ''}+launchtime:${launchTime}+browsertrackerid:${browserId}+robloxLocale:en_us+gameLocale:en_us+channel:`;
-    }
+  if (launcherUrl) {
+    launchArg = `roblox-player:1+launchmode:play+gameinfo:${ticket || ''}+launchtime:${launchTime}+placelauncherurl:${encodeURIComponent(launcherUrl)}+browsertrackerid:${browserId}+robloxLocale:en_us+gameLocale:en_us+channel:`;
+    console.log(`[Launcher] Joining game: ${parsedTarget.placeId} (Request: ${parsedTarget.requestType})`);
+  } else if (ticket) {
+    launchArg = `roblox-player:1+launchmode:app+gameinfo:${ticket}+launchtime:${launchTime}+browsertrackerid:${browserId}+robloxLocale:en_us+gameLocale:en_us+channel:`;
+    console.log('[Launcher] Opening authenticated App Home');
   }
 
   const child = spawn(exePath, [launchArg], {
@@ -150,5 +213,10 @@ module.exports = {
   launchRobloxInstance,
   launchMultipleInstances,
   resolveExecutable,
-  parsePlaceId
+  parseGameTarget,
+  buildPlaceLauncherUrl,
+  parsePlaceId: (t) => {
+    const p = parseGameTarget(t);
+    return p ? p.placeId : null;
+  }
 };

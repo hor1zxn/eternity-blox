@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, shell } = require('electron');
+const { app, BrowserWindow, ipcMain, shell, nativeImage } = require('electron');
 const path = require('path');
 const axios = require('axios');
 const nativeHelper = require('./native-helper');
@@ -13,9 +13,38 @@ const {
 } = require('./version-manager');
 const { launchRobloxInstance, launchMultipleInstances } = require('./roblox-launcher');
 
+// Ensure Windows Taskbar registers the unique AppUserModelID and icon
+app.setAppUserModelId('com.eternityblox.launcher');
+
 let mainWindow = null;
 
+// Track active instance sessions mapped to accounts & targets
+const runningInstances = new Map();
+
+function trackInstance(pid, data) {
+  runningInstances.set(pid, {
+    pid,
+    accountId: data.accountId || null,
+    username: data.username || 'Roblox Instance',
+    displayName: data.displayName || data.username || 'Roblox Instance',
+    avatarUrl: data.avatarUrl || null,
+    version: data.version || 'Default',
+    target: data.target || null,
+    startTime: Date.now()
+  });
+  broadcastInstances();
+}
+
+function broadcastInstances() {
+  if (mainWindow && !mainWindow.isDestroyed()) {
+    mainWindow.webContents.send('instances-updated', Array.from(runningInstances.values()));
+  }
+}
+
 function createWindow() {
+  const iconPath = path.join(__dirname, '..', '..', 'resources', 'icon.ico');
+  const appIcon = nativeImage.createFromPath(iconPath);
+
   mainWindow = new BrowserWindow({
     width: 1120,
     height: 760,
@@ -24,13 +53,17 @@ function createWindow() {
     frame: false,
     title: 'EternityBlox',
     backgroundColor: '#090a0f',
-    icon: path.join(__dirname, '..', '..', 'resources', 'icon.ico'),
+    icon: appIcon,
     webPreferences: {
       preload: path.join(__dirname, '..', 'preload', 'preload.js'),
       nodeIntegration: false,
       contextIsolation: true
     }
   });
+
+  if (!appIcon.isEmpty()) {
+    mainWindow.setIcon(appIcon);
+  }
 
   mainWindow.loadFile(path.join(__dirname, '..', 'renderer', 'index.html'));
 
@@ -65,8 +98,30 @@ app.whenReady().then(async () => {
 
   // Broadcast events to renderer
   nativeHelper.on('pids', (pids) => {
+    const pidSet = new Set(pids);
+    for (const trackedPid of runningInstances.keys()) {
+      if (!pidSet.has(trackedPid)) {
+        runningInstances.delete(trackedPid);
+      }
+    }
+    for (const pid of pids) {
+      if (!runningInstances.has(pid)) {
+        runningInstances.set(pid, {
+          pid,
+          accountId: null,
+          username: 'Roblox Client',
+          displayName: `PID ${pid}`,
+          avatarUrl: null,
+          version: 'Active',
+          target: null,
+          startTime: Date.now()
+        });
+      }
+    }
+
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('pids-updated', pids);
+      mainWindow.webContents.send('instances-updated', Array.from(runningInstances.values()));
     }
   });
 
@@ -131,27 +186,67 @@ ipcMain.handle('versions:apply-fps-cap', (event, { versionHash, fpsCap }) => {
 ipcMain.handle('launcher:spawn', async (event, options) => {
   const settings = storage.loadSettings();
   const activeVersion = options.versionHash || settings.activeVersion;
-  return await launchRobloxInstance({
+  const target = options.target || settings.gameTarget;
+  const res = await launchRobloxInstance({
     versionHash: activeVersion,
     cookie: options.cookie,
-    target: options.target || settings.gameTarget
+    target
   });
+
+  if (res && res.pid) {
+    trackInstance(res.pid, {
+      pid: res.pid,
+      accountId: options.accountId || null,
+      username: options.username || (options.cookie ? 'Account Session' : 'Guest Instance'),
+      displayName: options.displayName || options.username || 'Roblox Instance',
+      avatarUrl: options.avatarUrl || null,
+      version: res.version,
+      target
+    });
+  }
+
+  return res;
 });
 
 ipcMain.handle('launcher:spawn-multiple', async (event, { count = 1, versionHash = null, target = null }) => {
   const settings = storage.loadSettings();
   const activeVersion = versionHash || settings.activeVersion;
-  return await launchMultipleInstances(count, {
+  const t = target || settings.gameTarget;
+  const results = await launchMultipleInstances(count, {
     versionHash: activeVersion,
-    target: target || settings.gameTarget
+    target: t
   });
+
+  for (const r of results) {
+    if (r && r.pid) {
+      trackInstance(r.pid, {
+        pid: r.pid,
+        accountId: null,
+        username: 'Multi Instance',
+        displayName: `Multi Instance #${r.pid}`,
+        avatarUrl: null,
+        version: r.version,
+        target: t
+      });
+    }
+  }
+
+  return results;
+});
+
+ipcMain.handle('instances:list', () => {
+  return Array.from(runningInstances.values());
 });
 
 ipcMain.handle('launcher:kill-all', () => {
+  runningInstances.clear();
+  broadcastInstances();
   return nativeHelper.killAllRoblox();
 });
 
 ipcMain.handle('launcher:kill-pid', (event, pid) => {
+  runningInstances.delete(pid);
+  broadcastInstances();
   return nativeHelper.killPid(pid);
 });
 

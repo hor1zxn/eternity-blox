@@ -115,6 +115,7 @@
         </div>
 
         <div class="flight-strip-right">
+          <div id="cockpit-running-chips" class="cockpit-instances-chips"></div>
           <button class="flight-tool-chip danger" id="cockpit-btn-kill">
             <span class="material-icons-round">power_settings_new</span>
             <span>Kill All Instances</span>
@@ -386,14 +387,15 @@
               <thead>
                 <tr>
                   <th>PID</th>
-                  <th>Process Name</th>
+                  <th>Account Session</th>
+                  <th>Target Experience</th>
                   <th>Status</th>
                   <th style="text-align: right;">Action</th>
                 </tr>
               </thead>
               <tbody id="pids-table-body">
                 <tr>
-                  <td colspan="4" style="text-align: center; padding: 20px;">No active Roblox instances running.</td>
+                  <td colspan="5" style="text-align: center; padding: 24px; color: var(--t3);">No active Roblox instances running.</td>
                 </tr>
               </tbody>
             </table>
