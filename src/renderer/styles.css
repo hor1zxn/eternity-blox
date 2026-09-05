@@ -194,6 +194,11 @@ button:focus-visible, .nav-item:focus-visible {
   box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
+.tb-pill:active {
+  transform: translateY(0.5px) scale(0.98);
+  background: rgba(255, 255, 255, 0.04);
+}
+
 .tb-pill-icon {
   font-size: 13.5px !important;
   color: #6d738a;
