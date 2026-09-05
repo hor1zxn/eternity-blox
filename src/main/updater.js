@@ -50,7 +50,7 @@ class AppUpdater {
         let updateHandled = false;
 
         const onChecking = () => {
-          this.notify({ state: 'checking', message: 'Querying GitHub releases...' });
+          this.notify({ state: 'checking', message: 'Checking for updates...' });
         };
 
         const onAvailable = (info) => {
