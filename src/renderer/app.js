@@ -114,6 +114,145 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnSelectLaunchAll = document.getElementById('btn-select-launch-all');
   const btnSelectAddAccount = document.getElementById('btn-select-add-account');
 
+  // Custom Dialog Modal Elements
+  const customDialogModal = document.getElementById('custom-dialog-modal');
+  const customDialogBox = document.getElementById('custom-dialog-box');
+  const customDialogIconWrap = document.getElementById('custom-dialog-icon-wrap');
+  const customDialogIcon = document.getElementById('custom-dialog-icon');
+  const customDialogTitle = document.getElementById('custom-dialog-title');
+  const customDialogMessage = document.getElementById('custom-dialog-message');
+  const btnCustomDialogClose = document.getElementById('btn-custom-dialog-close');
+  const btnCustomDialogCancel = document.getElementById('btn-custom-dialog-cancel');
+  const btnCustomDialogConfirm = document.getElementById('btn-custom-dialog-confirm');
+
+  let dialogResolver = null;
+
+  function closeCustomDialog(result) {
+    if (customDialogModal) {
+      customDialogModal.classList.remove('active');
+    }
+    if (dialogResolver) {
+      const resolve = dialogResolver;
+      dialogResolver = null;
+      resolve(result);
+    }
+  }
+
+  btnCustomDialogConfirm?.addEventListener('click', () => closeCustomDialog(true));
+  btnCustomDialogCancel?.addEventListener('click', () => closeCustomDialog(false));
+  btnCustomDialogClose?.addEventListener('click', () => closeCustomDialog(false));
+  customDialogModal?.addEventListener('click', (e) => {
+    if (e.target === customDialogModal) {
+      closeCustomDialog(false);
+    }
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (customDialogModal?.classList.contains('active')) {
+      if (e.key === 'Escape') {
+        closeCustomDialog(false);
+      } else if (e.key === 'Enter') {
+        closeCustomDialog(true);
+      }
+    }
+  });
+
+  window.showConfirm = function(options = {}) {
+    const {
+      title = 'Confirmation Required',
+      message = 'Are you sure you want to proceed?',
+      confirmText = 'Confirm',
+      cancelText = 'Cancel',
+      isDanger = false,
+      icon = isDanger ? 'delete_forever' : 'help_outline',
+      type = isDanger ? 'danger' : 'info'
+    } = typeof options === 'string' ? { message: options } : options;
+
+    return new Promise((resolve) => {
+      dialogResolver = resolve;
+
+      if (customDialogTitle) customDialogTitle.textContent = title;
+      if (customDialogMessage) customDialogMessage.innerHTML = message;
+      if (btnCustomDialogConfirm) {
+        btnCustomDialogConfirm.textContent = confirmText;
+        if (isDanger) {
+          btnCustomDialogConfirm.className = 'btn-danger-confirm';
+        } else {
+          btnCustomDialogConfirm.className = 'btn btn-primary';
+        }
+      }
+      if (btnCustomDialogCancel) {
+        btnCustomDialogCancel.textContent = cancelText;
+        btnCustomDialogCancel.style.display = 'inline-flex';
+      }
+
+      if (customDialogBox) {
+        if (isDanger) {
+          customDialogBox.classList.add('danger-dialog');
+        } else {
+          customDialogBox.classList.remove('danger-dialog');
+        }
+      }
+
+      if (customDialogIconWrap) {
+        customDialogIconWrap.className = `custom-dialog-icon-wrap ${type || (isDanger ? 'danger' : 'info')}`;
+      }
+      if (customDialogIcon) {
+        customDialogIcon.textContent = icon;
+      }
+
+      if (customDialogModal) customDialogModal.classList.add('active');
+      btnCustomDialogConfirm?.focus();
+    });
+  };
+
+  window.showAlert = function(options = {}) {
+    const {
+      title = 'Notification',
+      message = '',
+      buttonText = 'OK',
+      isDanger = false,
+      type = isDanger ? 'danger' : 'info',
+      icon = isDanger ? 'error_outline' : (type === 'warning' ? 'warning_amber' : 'info')
+    } = typeof options === 'string' ? { message: options } : options;
+
+    return new Promise((resolve) => {
+      dialogResolver = resolve;
+
+      if (customDialogTitle) customDialogTitle.textContent = title;
+      if (customDialogMessage) customDialogMessage.innerHTML = message;
+      if (btnCustomDialogConfirm) {
+        btnCustomDialogConfirm.textContent = buttonText;
+        if (isDanger || type === 'danger') {
+          btnCustomDialogConfirm.className = 'btn-danger-confirm';
+        } else {
+          btnCustomDialogConfirm.className = 'btn btn-primary';
+        }
+      }
+      if (btnCustomDialogCancel) {
+        btnCustomDialogCancel.style.display = 'none';
+      }
+
+      if (customDialogBox) {
+        if (isDanger || type === 'danger') {
+          customDialogBox.classList.add('danger-dialog');
+        } else {
+          customDialogBox.classList.remove('danger-dialog');
+        }
+      }
+
+      if (customDialogIconWrap) {
+        customDialogIconWrap.className = `custom-dialog-icon-wrap ${type || 'info'}`;
+      }
+      if (customDialogIcon) {
+        customDialogIcon.textContent = icon;
+      }
+
+      if (customDialogModal) customDialogModal.classList.add('active');
+      btnCustomDialogConfirm?.focus();
+    });
+  };
+
   // Accounts Elements
   const accountsContainer = document.getElementById('accounts-container');
   const globalGameTarget = document.getElementById('global-game-target');
@@ -278,13 +417,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   window.deleteVersionPrompt = async (hash) => {
-    if (confirm(`Are you sure you want to delete ${hash} from your disk?`)) {
+    const confirmed = await window.showConfirm({
+      title: 'Delete Build',
+      message: `Are you sure you want to permanently delete build <b style="color: #ffffff;">${hash}</b> from your disk? This cannot be undone.`,
+      confirmText: 'Delete Build',
+      isDanger: true,
+      icon: 'delete_forever'
+    });
+    if (confirmed) {
       try {
         await window.api.deleteVersion(hash);
         log(`Deleted build ${hash}`, 'ok');
         await loadInstalledVersions();
       } catch (err) {
         log(`Delete failed: ${err.message}`, 'err');
+        await window.showAlert({
+          title: 'Deletion Failed',
+          message: `Unable to delete build: ${err.message}`,
+          type: 'danger',
+          icon: 'error_outline'
+        });
       }
     }
   };
@@ -342,8 +494,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       return res;
     } catch (err) {
       log(`Download failed: ${err.message}`, 'err');
-      alert(`Installation failed: ${err.message}`);
       downloadModal.classList.remove('active');
+      await window.showAlert({
+        title: 'Installation Failed',
+        message: `Roblox build installation encountered an error: <b style="color: var(--red);">${err.message}</b>`,
+        type: 'danger',
+        icon: 'cloud_off'
+      });
       throw err;
     }
   };
@@ -374,7 +531,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (!targetHash) {
       log('No Roblox build selected. Please install or select a build below.', 'err');
-      alert('No active Roblox build selected. Please install or choose a version from the installed list below.');
+      await window.showAlert({
+        title: 'No Build Selected',
+        message: 'No active Roblox client build selected. Please install a build or choose one from your installed list below.',
+        type: 'warning',
+        icon: 'layers_clear'
+      });
       return;
     }
 
@@ -556,13 +718,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   btnInstallCustom?.addEventListener('click', async () => {
     const val = customHashInput?.value.trim();
     if (!val) {
-      alert('Please enter a 16-hex version hash (e.g. version-e380c8edc8f6477c)');
+      await window.showAlert({
+        title: 'Missing Build Hash',
+        message: 'Please enter a 16-hex Roblox version hash (e.g. <code>version-e380c8edc8f6477c</code>).',
+        type: 'warning',
+        icon: 'tag'
+      });
       return;
     }
     let norm = val.toLowerCase();
     if (!norm.startsWith('version-')) norm = 'version-' + norm;
     if (!/^version-[0-9a-f]{16}$/i.test(norm)) {
-      alert('Invalid version hash format. Expected 16 hexadecimal characters.');
+      await window.showAlert({
+        title: 'Invalid Hash Format',
+        message: 'Expected a 16-character hexadecimal hash (e.g. <code>version-e380c8edc8f6477c</code>).',
+        type: 'danger',
+        icon: 'error_outline'
+      });
       return;
     }
     await window.downloadBuild(norm);
@@ -728,7 +900,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   };
 
   window.removeAccount = async (id) => {
-    if (confirm('Remove this account?')) {
+    const acc = (state.accounts || []).find(a => a.id === id);
+    const displayName = acc?.nickname || acc?.displayName || acc?.username || 'this account';
+    const confirmed = await window.showConfirm({
+      title: 'Remove Account',
+      message: `Are you sure you want to remove <b style="color: #ffffff;">${displayName}</b>${acc?.username ? ` (@${acc.username})` : ''}?<br><span style="font-size: 12px; color: var(--t3); display: inline-block; margin-top: 6px;">Session keys and authentication tokens will be cleared from local storage.</span>`,
+      confirmText: 'Remove Account',
+      isDanger: true,
+      icon: 'person_remove'
+    });
+    if (confirmed) {
       state.accounts = state.accounts.filter(a => a.id !== id);
       await window.api.saveAccounts(state.accounts);
       if (badgeAccountCount) badgeAccountCount.textContent = state.accounts.length;
@@ -788,7 +969,12 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   btnLaunchAllAccounts?.addEventListener('click', async () => {
     if (state.accounts.length === 0) {
-      alert('Add accounts first!');
+      await window.showAlert({
+        title: 'No Accounts Configured',
+        message: 'Please add at least one Roblox account before launching batch sessions.',
+        type: 'warning',
+        icon: 'group_off'
+      });
       return;
     }
     const target = getTargetGame();

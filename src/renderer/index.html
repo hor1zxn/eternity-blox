@@ -488,6 +488,36 @@
     </div>
   </div>
 
+  <!-- Custom Confirmation & Alert Dialog Modal -->
+  <div class="overlay" id="custom-dialog-modal">
+    <div class="modal custom-dialog-box" id="custom-dialog-box">
+      <div class="custom-dialog-glow"></div>
+      
+      <div class="modal-head" style="margin-bottom: 12px;">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div class="custom-dialog-icon-wrap" id="custom-dialog-icon-wrap">
+            <span class="material-icons-round" id="custom-dialog-icon">help_outline</span>
+          </div>
+          <div class="modal-title" id="custom-dialog-title">Confirmation Required</div>
+        </div>
+        <button class="modal-close" id="btn-custom-dialog-close">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+
+      <div class="custom-dialog-body" id="custom-dialog-body">
+        <p id="custom-dialog-message" style="font-size: 13px; color: var(--t2); line-height: 1.55; margin-bottom: 0;">
+          Are you sure you want to proceed with this action?
+        </p>
+      </div>
+
+      <div class="custom-dialog-actions" id="custom-dialog-actions">
+        <button class="btn btn-ghost" id="btn-custom-dialog-cancel">Cancel</button>
+        <button class="btn btn-primary" id="btn-custom-dialog-confirm">Confirm</button>
+      </div>
+    </div>
+  </div>
+
   <script src="app.js"></script>
 </body>
 </html>
