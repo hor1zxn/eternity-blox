@@ -53,6 +53,10 @@
       "resources/arrange-windows.ps1"
     ],
     "win": {
+      "sign": null,
+      "signAndEditExecutable": false,
+      "signDlls": false,
+      "signExts": [],
       "target": [
         {
           "target": "nsis",

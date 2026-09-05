@@ -129,40 +129,6 @@ function createWindow() {
     });
   }
 
-  if (process.argv.includes('--screenshot-credits')) {
-    mainWindow.webContents.on('did-finish-load', async () => {
-      await new Promise(r => setTimeout(r, 600));
-      await mainWindow.webContents.executeJavaScript(`
-        const tab = document.querySelector('.deck-tab[data-view="view-credits"]');
-        if (tab) tab.click();
-      `);
-      await new Promise(r => setTimeout(r, 600));
-      const fs = require('fs');
-      const img = await mainWindow.webContents.capturePage();
-      const dest = 'C:\\Users\\Serenity\\.gemini\\antigravity-ide\\brain\\891088dd-ee15-45e8-bb95-2757d0a0a2be\\credits_tab_preview.png';
-      fs.writeFileSync(dest, img.toPNG());
-      console.log('[PREVIEW] Captured live credits tab screenshot to:', dest);
-      app.quit();
-    });
-  }
-
-  if (process.argv.includes('--screenshot-mixer')) {
-    mainWindow.webContents.on('did-finish-load', async () => {
-      await new Promise(r => setTimeout(r, 600));
-      await mainWindow.webContents.executeJavaScript(`
-        const tab = document.querySelector('.deck-tab[data-view="view-mixer"]');
-        if (tab) tab.click();
-      `);
-      await new Promise(r => setTimeout(r, 600));
-      const fs = require('fs');
-      const img = await mainWindow.webContents.capturePage();
-      const dest = 'C:\\Users\\Serenity\\.gemini\\antigravity-ide\\brain\\891088dd-ee15-45e8-bb95-2757d0a0a2be\\mixer_tab_preview.png';
-      fs.writeFileSync(dest, img.toPNG());
-      console.log('[PREVIEW] Captured live mixer tab screenshot to:', dest);
-      app.quit();
-    });
-  }
-
   // Security: Prevent navigating away from the local application
   mainWindow.webContents.on('will-navigate', (event) => {
     event.preventDefault();
@@ -187,10 +153,7 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
-  const isHeadlessTest = process.argv.includes('--smoke-test') ||
-    process.argv.includes('--screenshot-credits') ||
-    process.argv.includes('--screenshot-builds') ||
-    process.argv.includes('--screenshot-mixer');
+  const isHeadlessTest = process.argv.includes('--smoke-test');
 
   if (!isHeadlessTest) {
     createSplashWindow();

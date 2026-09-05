@@ -35,9 +35,14 @@ class NativeHelper extends EventEmitter {
   ensureExecutable() {
     this.exePath = this.resolveExecutablePath();
     if (fs.existsSync(this.exePath)) return true;
-    const cscPath = 'C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe';
-    if (!fs.existsSync(cscPath)) {
-      throw new Error(`C# compiler not found at ${cscPath}`);
+    const sysRoot = process.env.SystemRoot || process.env.windir || 'C:\\Windows';
+    const cscCandidates = [
+      path.join(sysRoot, 'Microsoft.NET', 'Framework64', 'v4.0.30319', 'csc.exe'),
+      path.join(sysRoot, 'Microsoft.NET', 'Framework', 'v4.0.30319', 'csc.exe')
+    ];
+    const cscPath = cscCandidates.find(p => fs.existsSync(p));
+    if (!cscPath) {
+      throw new Error('Microsoft .NET Framework 4.0 C# compiler (csc.exe) not found on system.');
     }
     if (!fs.existsSync(this.csPath)) {
       throw new Error(`Native source not found at ${this.csPath}`);
@@ -193,7 +198,8 @@ class NativeHelper extends EventEmitter {
 
   async isWindowReady(pid) {
     if (!pid) return false;
-    const targetPid = Number(pid);
+    const targetPid = parseInt(pid, 10);
+    if (isNaN(targetPid) || targetPid <= 0) return false;
     try {
       const wins = await this.getWindows();
       if (wins.includes(targetPid)) return true;
