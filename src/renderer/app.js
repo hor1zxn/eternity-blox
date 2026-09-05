@@ -1523,6 +1523,48 @@ document.addEventListener('DOMContentLoaded', async () => {
     updateMutexUI(held);
   });
 
+  // Credits & Community Actions
+  window.copyDevDiscord = (btn) => {
+    navigator.clipboard.writeText('@hor1zxn');
+    if (btn) {
+      const label = btn.querySelector('.credit-btn-label') || btn;
+      const oldText = label.textContent;
+      label.textContent = 'Copied @hor1zxn!';
+      btn.style.background = 'var(--green)';
+      btn.style.borderColor = 'var(--green)';
+      btn.style.color = '#000000';
+      setTimeout(() => {
+        label.textContent = oldText;
+        btn.style.background = '';
+        btn.style.borderColor = '';
+        btn.style.color = '';
+      }, 2000);
+    }
+    log('Copied Developer Discord: @hor1zxn', 'ok');
+  };
+
+  window.joinEternityDiscord = () => {
+    window.api.openExternal('https://discord.gg/eQFcharHwS');
+    log('Opening Project Eternity Discord community invite...', 'ok');
+  };
+
+  window.copyEternityInvite = (btn) => {
+    navigator.clipboard.writeText('https://discord.gg/eQFcharHwS');
+    if (btn) {
+      const label = btn.querySelector('span:last-child') || btn;
+      const oldText = label.textContent;
+      label.textContent = 'Copied Link!';
+      btn.style.borderColor = 'var(--green)';
+      btn.style.color = 'var(--green)';
+      setTimeout(() => {
+        label.textContent = oldText;
+        btn.style.borderColor = '';
+        btn.style.color = '';
+      }, 2000);
+    }
+    log('Copied Project Eternity Discord invite link: https://discord.gg/eQFcharHwS', 'ok');
+  };
+
   // Initialize
   init();
 });

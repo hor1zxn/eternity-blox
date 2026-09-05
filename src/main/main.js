@@ -78,6 +78,23 @@ function createWindow() {
     });
   }
 
+  if (process.argv.includes('--screenshot-credits')) {
+    mainWindow.webContents.on('did-finish-load', async () => {
+      await new Promise(r => setTimeout(r, 600));
+      await mainWindow.webContents.executeJavaScript(`
+        const tab = document.querySelector('.deck-tab[data-view="view-credits"]');
+        if (tab) tab.click();
+      `);
+      await new Promise(r => setTimeout(r, 600));
+      const fs = require('fs');
+      const img = await mainWindow.webContents.capturePage();
+      const dest = 'C:\\Users\\Serenity\\.gemini\\antigravity-ide\\brain\\891088dd-ee15-45e8-bb95-2757d0a0a2be\\credits_tab_preview.png';
+      fs.writeFileSync(dest, img.toPNG());
+      console.log('[PREVIEW] Captured live credits tab screenshot to:', dest);
+      app.quit();
+    });
+  }
+
   // Security: Prevent navigating away from the local application
   mainWindow.webContents.on('will-navigate', (event) => {
     event.preventDefault();
