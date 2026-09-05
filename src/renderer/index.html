@@ -6,7 +6,7 @@
   <title>EternityBlox</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Round" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
 </head>
@@ -52,72 +52,119 @@
     </div>
   </div>
 
-  <!-- Main Layout -->
-  <div id="layout">
-    <!-- Sidebar -->
-    <nav id="sidebar">
-      <div class="nav-group">
-        <button class="nav-item active" data-tab="page-downgrader">
-          <span class="material-icons-round">history</span>
-          <span class="nav-label">Version Manager</span>
-          <span class="nav-badge" id="badge-active-ver">Target</span>
-        </button>
+  <!-- Main Container: Full-Width Gaming Cockpit & Sub-Deck -->
+  <div id="app-container">
 
-        <button class="nav-item" data-tab="page-accounts">
-          <span class="material-icons-round">people</span>
-          <span class="nav-label">Accounts</span>
-          <span class="nav-badge" id="badge-account-count">0</span>
-        </button>
+    <!-- COCKPIT FLIGHT DECK (Hero Command HUD) -->
+    <header id="cockpit-hud">
+      <!-- Cockpit Top Telemetry Bar -->
+      <div class="cockpit-telemetry">
+        <div class="cockpit-target-box">
+          <span class="cockpit-pulse-dot"></span>
+          <span class="cockpit-label">ACTIVE ENGINE TARGET</span>
+          <span class="cockpit-hash" id="cockpit-active-hash">Detecting build...</span>
+          <button class="cockpit-icon-btn" id="btn-copy-active-hash" title="Copy version hash">
+            <span class="material-icons-round">content_copy</span>
+          </button>
+        </div>
 
-        <button class="nav-item" data-tab="page-mixer">
-          <span class="material-icons-round">tune</span>
-          <span class="nav-label">Mixer & Anti-AFK</span>
-          <span class="nav-badge" id="badge-pids-count">0</span>
-        </button>
-
-        <button class="nav-item" data-tab="page-settings">
-          <span class="material-icons-round">settings</span>
-          <span class="nav-label">Settings & Logs</span>
-        </button>
-
-        <button class="nav-item nav-danger" id="nav-kill-all">
-          <span class="material-icons-round">power_settings_new</span>
-          <span class="nav-label">Kill All Instances</span>
-        </button>
-      </div>
-
-      <div class="sb-bottom">
-        <div class="sb-widget">
-          <div class="sb-widget-label">TARGET ROBLOX BUILD</div>
-          <div class="sb-widget-value" id="sidebar-active-version">Detecting...</div>
+        <div class="cockpit-stats">
+          <span class="cockpit-stat-chip" id="cockpit-size-stat">
+            <span class="material-icons-round">inventory_2</span>
+            <span id="cockpit-size-val">-- MB</span>
+          </span>
+          <span class="cockpit-stat-chip live" id="cockpit-pids-stat">
+            <span class="material-icons-round">memory</span>
+            <span id="cockpit-pids-val">0 PIDs</span>
+          </span>
         </div>
       </div>
+
+      <!-- Cockpit Hero Action Row -->
+      <div class="cockpit-actions-row">
+        <button class="btn-cockpit-hero" id="btn-cockpit-launch">
+          <span class="material-icons-round">play_arrow</span>
+          <span class="hero-btn-text">LAUNCH ACTIVE CLIENT</span>
+        </button>
+
+        <button class="btn-cockpit-spawn" id="btn-cockpit-spawn">
+          <span class="material-icons-round">add</span>
+          <span>SPAWN MULTI</span>
+        </button>
+
+        <div class="cockpit-target-input">
+          <span class="material-icons-round">sports_esports</span>
+          <input type="text" id="cockpit-place-id" placeholder="Target Place ID or Game URL (optional)...">
+          <button class="btn-cockpit-save" id="btn-cockpit-save-target" title="Save Game Target">
+            <span class="material-icons-round">save</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Cockpit Flight Tools Quick-Bar -->
+      <div class="cockpit-flight-strip">
+        <div class="flight-strip-left">
+          <button class="flight-tool-chip active" id="cockpit-toggle-afk">
+            <span class="material-icons-round">shield</span>
+            <span id="cockpit-afk-label">Anti-AFK: ON</span>
+          </button>
+          <button class="flight-tool-chip" id="cockpit-btn-tile">
+            <span class="material-icons-round">grid_view</span>
+            <span>Tile Grid (2x2)</span>
+          </button>
+          <button class="flight-tool-chip" id="cockpit-btn-split">
+            <span class="material-icons-round">view_column</span>
+            <span>Split Windows</span>
+          </button>
+        </div>
+
+        <div class="flight-strip-right">
+          <button class="flight-tool-chip danger" id="cockpit-btn-kill">
+            <span class="material-icons-round">power_settings_new</span>
+            <span>Kill All Instances</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- SUB-DECK SEGMENTED TABS -->
+    <nav id="deck-tabs">
+      <button class="deck-tab active" data-view="view-installed">
+        <span class="material-icons-round">storage</span>
+        <span class="deck-tab-title">Installed Builds</span>
+        <span class="deck-tab-badge" id="badge-installed-count">0</span>
+      </button>
+
+      <button class="deck-tab" data-view="view-catalog">
+        <span class="material-icons-round">cloud_download</span>
+        <span class="deck-tab-title">Release Catalog</span>
+        <span class="deck-tab-badge">374+</span>
+      </button>
+
+      <button class="deck-tab" data-view="view-accounts">
+        <span class="material-icons-round">people</span>
+        <span class="deck-tab-title">Accounts</span>
+        <span class="deck-tab-badge" id="badge-deck-accounts">0</span>
+      </button>
+
+      <button class="deck-tab" data-view="view-mixer">
+        <span class="material-icons-round">tune</span>
+        <span class="deck-tab-title">Mixer & FastFlags</span>
+      </button>
+
+      <button class="deck-tab" data-view="view-logs">
+        <span class="material-icons-round">terminal</span>
+        <span class="deck-tab-title">Diagnostics & Logs</span>
+      </button>
     </nav>
 
-    <!-- Content Pages -->
-    <main id="main">
+    <!-- WORKSPACE VIEWS CONTAINER -->
+    <main id="deck-workspace">
 
-      <!-- PAGE 1: VERSION SELECTOR & LAUNCHER -->
-      <section class="page active" id="page-downgrader">
-        <div class="ph">
-          <div>
-            <h2 class="ph-title">Roblox Version Manager</h2>
-            <p class="ph-desc">Select, download, or launch any Roblox client build with automatic multi-instance support.</p>
-          </div>
-          <div class="ph-actions">
-            <button class="btn btn-primary" id="btn-quick-launch">
-              <span class="material-icons-round">play_arrow</span>
-              <span>Launch Active Build</span>
-            </button>
-            <button class="btn btn-ghost" id="btn-launch-more">
-              <span class="material-icons-round">add</span>
-              <span>Launch Another</span>
-            </button>
-          </div>
-        </div>
-
+      <!-- VIEW 1: INSTALLED BUILDS -->
+      <section class="deck-view active" id="view-installed">
         <!-- Custom Version Hash Input Card -->
-        <div class="card">
+        <div class="card" style="margin-bottom: 14px;">
           <div style="display: flex; gap: 10px; align-items: center;">
             <div class="input-box" style="flex: 1;">
               <span class="material-icons-round">tag</span>
@@ -130,11 +177,11 @@
           </div>
         </div>
 
-        <!-- Installed Versions Section -->
+        <!-- Installed Builds Grid Section -->
         <div class="card">
-          <div class="ph" style="margin-bottom: 8px;">
+          <div class="ph" style="margin-bottom: 10px;">
             <div>
-              <h3 class="ph-title" style="font-size: 16px;">Installed Builds On Your Machine</h3>
+              <h3 class="ph-title" style="font-size: 15px;">Installed Builds On Your Machine</h3>
               <p class="ph-desc">Stored in %LOCALAPPDATA%\Roblox\Versions. Click any version to set it active or launch it directly.</p>
             </div>
             <button class="btn btn-ghost btn-sm" id="btn-refresh-installed">
@@ -147,15 +194,17 @@
             <div class="empty-state">Scanning local builds...</div>
           </div>
         </div>
+      </section>
 
-        <!-- Official Release Catalog -->
+      <!-- VIEW 2: OFFICIAL RELEASE CATALOG -->
+      <section class="deck-view" id="view-catalog">
         <div class="card">
           <div class="ph" style="margin-bottom: 12px;">
             <div>
-              <h3 class="ph-title" style="font-size: 16px;">Official Roblox Release Catalog</h3>
+              <h3 class="ph-title" style="font-size: 15px;">Official Roblox Release Catalog</h3>
               <p class="ph-desc">Browse through 370+ official deployments. Select any past build to install and run.</p>
             </div>
-            <div class="input-box" style="width: 260px;">
+            <div class="input-box" style="width: 280px;">
               <span class="material-icons-round">search</span>
               <input type="text" id="catalog-search" placeholder="Search releases (e.g. 0.736)...">
             </div>
@@ -181,8 +230,8 @@
         </div>
       </section>
 
-      <!-- PAGE 2: ACCOUNTS -->
-      <section class="page" id="page-accounts">
+      <!-- VIEW 3: ACCOUNTS -->
+      <section class="deck-view" id="view-accounts">
         <div class="ph">
           <div>
             <h2 class="ph-title">Roblox Accounts</h2>
@@ -224,8 +273,8 @@
         </div>
       </section>
 
-      <!-- PAGE 3: MIXER & ANTI-AFK -->
-      <section class="page" id="page-mixer">
+      <!-- VIEW 4: PERFORMANCE MIXER & UTILITIES -->
+      <section class="deck-view" id="view-mixer">
         <div class="ph">
           <div>
             <h2 class="ph-title">Performance Mixer & Utilities</h2>
@@ -237,7 +286,7 @@
           </button>
         </div>
 
-        <!-- Setting Card: Mutex Status -->
+        <!-- Mutex Status Card -->
         <div class="sc">
           <div class="sc-head">Singleton Mutex & Multi-Instance Engine</div>
           <div class="sr">
@@ -252,7 +301,7 @@
           </div>
         </div>
 
-        <!-- Setting Card: Audio Volume -->
+        <!-- Audio Volume Card -->
         <div class="sc">
           <div class="sc-head">Audio Session Controls</div>
           <div class="sr">
@@ -267,7 +316,7 @@
           </div>
         </div>
 
-        <!-- Setting Card: Anti-AFK -->
+        <!-- Anti-AFK Card -->
         <div class="sc">
           <div class="sc-head">Anti-AFK Protection</div>
           <div class="sr">
@@ -292,7 +341,7 @@
           </div>
         </div>
 
-        <!-- Setting Card: FPS Cap -->
+        <!-- FPS Cap Card -->
         <div class="sc">
           <div class="sc-head">FPS Cap & FastFlags</div>
           <div class="sr">
@@ -310,7 +359,7 @@
           </div>
         </div>
 
-        <!-- Setting Card: Window Arranger -->
+        <!-- Window Arranger Card -->
         <div class="sc">
           <div class="sc-head">Window Arranger</div>
           <div class="sr">
@@ -356,12 +405,12 @@
         </div>
       </section>
 
-      <!-- PAGE 4: SETTINGS & LOGS -->
-      <section class="page" id="page-settings">
+      <!-- VIEW 5: SETTINGS & LOGS -->
+      <section class="deck-view" id="view-logs">
         <div class="ph">
           <div>
             <h2 class="ph-title">Settings & Diagnostics</h2>
-            <p class="ph-desc">Inspect configuration paths and live MultiBlox system diagnostics.</p>
+            <p class="ph-desc">Inspect configuration paths and live EternityBlox system diagnostics.</p>
           </div>
         </div>
 

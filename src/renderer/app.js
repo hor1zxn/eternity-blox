@@ -20,7 +20,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   btnMaximize?.addEventListener('click', () => window.api.maximize());
   btnClose?.addEventListener('click', () => window.api.close());
 
-  // Navigation & Tabs
+  // Navigation & Sub-Deck Tabs
   const navItems = document.querySelectorAll('.nav-item[data-tab]');
   const pages = document.querySelectorAll('.page');
 
@@ -35,6 +35,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
+  const deckTabs = document.querySelectorAll('.deck-tab[data-view]');
+  const deckViews = document.querySelectorAll('.deck-view');
+
+  deckTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      const targetId = tab.dataset.view;
+      deckTabs.forEach(t => t.classList.remove('active'));
+      deckViews.forEach(v => v.classList.remove('active'));
+      tab.classList.add('active');
+      const targetView = document.getElementById(targetId);
+      if (targetView) targetView.classList.add('active');
+    });
+  });
+
   // Header Elements
   const mutexPill = document.getElementById('mutex-pill');
   const mutexLabel = document.getElementById('mutex-label');
@@ -45,6 +59,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   const badgeAccountCount = document.getElementById('badge-account-count');
   const badgePidsCount = document.getElementById('badge-pids-count');
   const activePidsBadge = document.getElementById('active-pids-badge');
+
+  // Cockpit Flight Deck Elements
+  const cockpitActiveHash = document.getElementById('cockpit-active-hash');
+  const btnCopyActiveHash = document.getElementById('btn-copy-active-hash');
+  const cockpitSizeVal = document.getElementById('cockpit-size-val');
+  const cockpitPidsVal = document.getElementById('cockpit-pids-val');
+  const btnCockpitLaunch = document.getElementById('btn-cockpit-launch');
+  const btnCockpitSpawn = document.getElementById('btn-cockpit-spawn');
+  const cockpitPlaceId = document.getElementById('cockpit-place-id');
+  const btnCockpitSaveTarget = document.getElementById('btn-cockpit-save-target');
+  const cockpitToggleAfk = document.getElementById('cockpit-toggle-afk');
+  const cockpitAfkLabel = document.getElementById('cockpit-afk-label');
+  const cockpitBtnTile = document.getElementById('cockpit-btn-tile');
+  const cockpitBtnSplit = document.getElementById('cockpit-btn-split');
+  const cockpitBtnKill = document.getElementById('cockpit-btn-kill');
+  const badgeInstalledCount = document.getElementById('badge-installed-count');
+  const badgeDeckAccounts = document.getElementById('badge-deck-accounts');
 
   // Version Manager Elements
   const btnQuickLaunch = document.getElementById('btn-quick-launch');
@@ -118,6 +149,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       state.activeVersion = state.settings.activeVersion || '';
       if (state.settings.gameTarget) {
         if (globalGameTarget) globalGameTarget.value = state.settings.gameTarget;
+        if (cockpitPlaceId) cockpitPlaceId.value = state.settings.gameTarget;
       }
 
       log('Initializing EternityBlox Black & White Edition...');
@@ -151,6 +183,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           versionsDirDisplay.textContent = '%LOCALAPPDATA%\\Roblox\\Versions';
         }
       }
+      if (badgeInstalledCount) badgeInstalledCount.textContent = list.length;
     } catch (err) {
       log(`Failed to list installed versions: ${err.message}`, 'err');
     }
@@ -205,7 +238,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   window.launchSpecificVersion = async (hash) => {
     try {
-      const target = (globalGameTarget?.value || '').trim();
+      const target = (cockpitPlaceId?.value || globalGameTarget?.value || '').trim();
       log(`Launching instance of ${hash}...`);
       const res = await window.api.launchInstance({ versionHash: hash, target });
       log(`Launched Roblox (PID: ${res.pid}) with build ${res.version}!`, 'ok');
@@ -231,6 +264,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (headerActiveVer) headerActiveVer.textContent = disp.startsWith('version-') ? disp.slice(0, 16) : disp;
     if (badgeActiveVer) badgeActiveVer.textContent = state.activeVersion ? 'Pinned' : 'Target';
     if (sidebarActiveVersion) sidebarActiveVersion.textContent = state.activeVersion || 'Auto (Latest)';
+    if (cockpitActiveHash) cockpitActiveHash.textContent = state.activeVersion || 'Auto (Latest)';
+
+    const matched = state.installedVersions.find(v => v.hash === state.activeVersion);
+    if (cockpitSizeVal) {
+      if (matched && matched.sizeBytes) {
+        cockpitSizeVal.textContent = (matched.sizeBytes / (1024 * 1024)).toFixed(1) + ' MB';
+      } else {
+        cockpitSizeVal.textContent = state.installedVersions.length > 0 ? 'Ready' : '-- MB';
+      }
+    }
+    if (badgeInstalledCount) badgeInstalledCount.textContent = state.installedVersions.length;
+    if (badgeDeckAccounts) badgeDeckAccounts.textContent = state.accounts.length;
   }
 
   // Fetch Live Deploy Data
@@ -340,8 +385,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     log('Download cancelled by user.', 'err');
   });
 
-  // Launch Active Build Button
-  btnQuickLaunch?.addEventListener('click', async () => {
+  // Launch Active Build (Shared Handler)
+  async function launchActiveBuild() {
     let targetHash = state.activeVersion;
     if (!targetHash && state.installedVersions.length > 0) {
       targetHash = state.installedVersions[0].hash;
@@ -357,7 +402,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    const target = (globalGameTarget?.value || '').trim();
+    const target = (cockpitPlaceId?.value || globalGameTarget?.value || '').trim();
     log(`Spawning active Roblox build (${targetHash})...`);
     try {
       const res = await window.api.launchInstance({ versionHash: targetHash, target });
@@ -365,10 +410,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (err) {
       log(`Launch failed: ${err.message}`, 'err');
     }
-  });
+  }
 
-  // Launch More Instances Button
-  btnLaunchMore?.addEventListener('click', async () => {
+  // Launch More Instances (Shared Handler)
+  async function spawnMultiInstance() {
     let targetHash = state.activeVersion;
     if (!targetHash && state.installedVersions.length > 0) {
       targetHash = state.installedVersions[0].hash;
@@ -378,7 +423,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       renderInstalledVersions();
     }
 
-    const target = (globalGameTarget?.value || '').trim();
+    const target = (cockpitPlaceId?.value || globalGameTarget?.value || '').trim();
     log('Spawning additional Roblox instance...');
     try {
       const res = await window.api.launchMultiple({ count: 1, versionHash: targetHash, target });
@@ -388,6 +433,58 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (err) {
       log(`Launch more error: ${err.message}`, 'err');
     }
+  }
+
+  btnCockpitLaunch?.addEventListener('click', launchActiveBuild);
+  btnQuickLaunch?.addEventListener('click', launchActiveBuild);
+  btnCockpitSpawn?.addEventListener('click', spawnMultiInstance);
+  btnLaunchMore?.addEventListener('click', spawnMultiInstance);
+
+  // Cockpit Action Tools
+  btnCopyActiveHash?.addEventListener('click', () => {
+    if (state.activeVersion) {
+      navigator.clipboard.writeText(state.activeVersion);
+      log(`Copied build hash to clipboard: ${state.activeVersion}`, 'ok');
+    }
+  });
+
+  btnCockpitSaveTarget?.addEventListener('click', () => {
+    const t = (cockpitPlaceId?.value || '').trim();
+    window.api.saveSettings({ gameTarget: t });
+    if (globalGameTarget) globalGameTarget.value = t;
+    log(`Saved default target: ${t || 'Home'}`, 'ok');
+  });
+
+  cockpitToggleAfk?.addEventListener('click', () => {
+    if (!antiAfkToggle) return;
+    antiAfkToggle.checked = !antiAfkToggle.checked;
+    antiAfkToggle.dispatchEvent(new Event('change'));
+  });
+
+  function syncCockpitAfkState(enabled) {
+    if (!cockpitToggleAfk || !cockpitAfkLabel) return;
+    if (enabled) {
+      cockpitToggleAfk.classList.add('active');
+      cockpitAfkLabel.textContent = 'Anti-AFK: ON';
+    } else {
+      cockpitToggleAfk.classList.remove('active');
+      cockpitAfkLabel.textContent = 'Anti-AFK: OFF';
+    }
+  }
+
+  cockpitBtnTile?.addEventListener('click', () => {
+    window.api.arrangeWindows('grid');
+    log('Arranged Roblox windows in 2x2 grid.', 'ok');
+  });
+
+  cockpitBtnSplit?.addEventListener('click', () => {
+    window.api.arrangeWindows('split');
+    log('Arranged Roblox windows side-by-side.', 'ok');
+  });
+
+  cockpitBtnKill?.addEventListener('click', () => {
+    window.api.killAllRoblox();
+    log('Terminated all Roblox processes.', 'err');
   });
 
   // Custom Hash Input Button
@@ -581,6 +678,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const enabled = antiAfkToggle.checked;
     const sec = enabled ? Number(afkSlider?.value || 1080) : 0;
     window.api.setAntiAfk(sec);
+    syncCockpitAfkState(enabled);
     log(`Anti-AFK ${enabled ? 'enabled' : 'disabled'}`, enabled ? 'ok' : 'err');
   });
 
@@ -643,6 +741,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (instanceCountLabel) instanceCountLabel.textContent = `${count} Running`;
     if (activePidsBadge) activePidsBadge.textContent = `${count} PIDs`;
     if (badgePidsCount) badgePidsCount.textContent = `${count}`;
+    if (cockpitPidsVal) cockpitPidsVal.textContent = `${count} PIDs`;
+    const cockpitRunningCount = document.getElementById('cockpit-running-count');
+    if (cockpitRunningCount) cockpitRunningCount.textContent = `${count} Running`;
 
     if (!pidsTableBody) return;
     if (count === 0) {
