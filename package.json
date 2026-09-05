@@ -76,6 +76,7 @@
     "nsis": {
       "oneClick": true,
       "perMachine": false,
+      "include": "build/installer.nsh",
       "allowElevation": true,
       "allowToChangeInstallationDirectory": false,
       "installerIcon": "resources/icon.ico",
