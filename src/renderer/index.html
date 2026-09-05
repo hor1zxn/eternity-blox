@@ -80,12 +80,7 @@
       <div class="cockpit-actions-row">
         <button class="btn-cockpit-hero" id="btn-cockpit-launch">
           <span class="material-icons-round">play_arrow</span>
-          <span class="hero-btn-text">LAUNCH ACTIVE CLIENT</span>
-        </button>
-
-        <button class="btn-cockpit-spawn" id="btn-cockpit-spawn">
-          <span class="material-icons-round">add</span>
-          <span>SPAWN MULTI</span>
+          <span class="hero-btn-text">LAUNCH CLIENT</span>
         </button>
 
         <div class="cockpit-target-input">
@@ -454,6 +449,41 @@
       <div style="display: flex; gap: 8px; justify-content: flex-end;">
         <button class="btn btn-ghost" id="btn-cancel-account">Cancel</button>
         <button class="btn btn-primary" id="btn-save-account">Verify & Save</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Account Select Modal -->
+  <div class="overlay" id="account-select-modal">
+    <div class="modal" style="max-width: 520px;">
+      <div class="modal-head">
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <img src="../eternityblox.png" alt="" style="width: 20px; height: 20px; object-fit: contain;">
+          <div class="modal-title">Select Launch Account</div>
+        </div>
+        <button class="modal-close" id="btn-close-account-select">
+          <span class="material-icons-round">close</span>
+        </button>
+      </div>
+      <p style="font-size: 12.5px; color: var(--t2); margin-bottom: 14px; line-height: 1.5;">
+        Select an account to launch with active build <code id="select-modal-build-disp">Default</code> into <code id="select-modal-target-disp">Home</code>:
+      </p>
+      <div class="account-select-list" id="account-select-list">
+        <!-- Rendered dynamically -->
+      </div>
+      <div class="account-select-foot">
+        <button class="btn btn-ghost btn-sm" id="btn-select-launch-guest">
+          <span class="material-icons-round">person_outline</span>
+          <span>Launch as Guest</span>
+        </button>
+        <button class="btn btn-ghost btn-sm" id="btn-select-launch-all">
+          <span class="material-icons-round">dynamic_feed</span>
+          <span>Launch All</span>
+        </button>
+        <button class="btn btn-primary btn-sm" id="btn-select-add-account">
+          <span class="material-icons-round">add</span>
+          <span>Add Account</span>
+        </button>
       </div>
     </div>
   </div>

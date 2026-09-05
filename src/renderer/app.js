@@ -104,6 +104,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   const nicknameInput = document.getElementById('nickname-input');
   const accountValidateStatus = document.getElementById('account-validate-status');
 
+  // Account Select Modal Elements
+  const accountSelectModal = document.getElementById('account-select-modal');
+  const btnCloseAccountSelect = document.getElementById('btn-close-account-select');
+  const accountSelectList = document.getElementById('account-select-list');
+  const selectModalBuildDisp = document.getElementById('select-modal-build-disp');
+  const selectModalTargetDisp = document.getElementById('select-modal-target-disp');
+  const btnSelectLaunchGuest = document.getElementById('btn-select-launch-guest');
+  const btnSelectLaunchAll = document.getElementById('btn-select-launch-all');
+  const btnSelectAddAccount = document.getElementById('btn-select-add-account');
+
   // Accounts Elements
   const accountsContainer = document.getElementById('accounts-container');
   const globalGameTarget = document.getElementById('global-game-target');
@@ -401,7 +411,97 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  btnCockpitLaunch?.addEventListener('click', launchActiveBuild);
+  // Account Select Modal Handling
+  function openAccountSelectModal() {
+    if (!accountSelectModal) return;
+    const target = getTargetGame();
+    if (selectModalBuildDisp) {
+      selectModalBuildDisp.textContent = state.activeVersion || 'Default';
+    }
+    if (selectModalTargetDisp) {
+      selectModalTargetDisp.textContent = target ? (target.length > 28 ? target.slice(0, 25) + '...' : target) : 'Home / Default';
+    }
+    renderAccountSelectList();
+    accountSelectModal.classList.add('active');
+  }
+
+  function closeAccountSelectModal() {
+    accountSelectModal?.classList.remove('active');
+  }
+
+  function renderAccountSelectList() {
+    if (!accountSelectList) return;
+    if (!state.accounts || state.accounts.length === 0) {
+      accountSelectList.innerHTML = `
+        <div style="text-align: center; padding: 24px 12px; color: var(--t2); font-size: 13px;">
+          <span class="material-icons-round" style="font-size: 32px; color: var(--t3); display: block; margin-bottom: 8px;">account_circle</span>
+          <strong style="color: #fff; display: block; margin-bottom: 4px;">No accounts saved yet</strong>
+          <span style="font-size: 11.5px; color: var(--t3); line-height: 1.4; display: block;">Add your Roblox accounts below, or launch immediately as Guest / Standalone.</span>
+        </div>
+      `;
+      return;
+    }
+
+    accountSelectList.innerHTML = state.accounts.map(acc => {
+      const avatarSrc = acc.avatarUrl || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="%2352525b"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>';
+      const activeInst = (state.instances || []).find(inst => String(inst.accountId) === String(acc.id));
+      const isRunning = Boolean(activeInst);
+
+      return `
+        <div class="account-select-item ${isRunning ? 'is-running' : ''}" onclick="window.launchAccountFromSelect('${acc.id}')">
+          <div class="account-select-left">
+            <div class="account-select-av">
+              <img src="${avatarSrc}" alt="Avatar">
+            </div>
+            <div>
+              <div class="account-select-name">${acc.nickname || acc.displayName || acc.username || 'Roblox User'}</div>
+              <div class="account-select-user">@${acc.username || 'unknown'}</div>
+            </div>
+          </div>
+          <div class="account-select-right">
+            ${isRunning ? `
+              <span class="badge b-white" style="color:var(--green); border-color:rgba(34,197,94,0.3); font-size:10.5px;">
+                <span class="tb-dot" style="background:var(--green); width:5px; height:5px; margin-right:4px;"></span>RUNNING (${activeInst.pid})
+              </span>
+              <button class="btn btn-danger btn-sm" style="padding: 4px 8px;" onclick="event.stopPropagation(); window.killSpecificPid(${activeInst.pid});" title="Kill PID ${activeInst.pid}">
+                <span class="material-icons-round" style="font-size: 14px;">power_settings_new</span>
+              </button>
+            ` : `
+              <div class="account-select-action">
+                <span class="material-icons-round" style="font-size: 14px;">play_arrow</span>
+                <span>Launch</span>
+              </div>
+            `}
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  window.launchAccountFromSelect = async (id) => {
+    closeAccountSelectModal();
+    await window.launchAccount(id);
+  };
+
+  btnCloseAccountSelect?.addEventListener('click', closeAccountSelectModal);
+  btnSelectLaunchGuest?.addEventListener('click', () => {
+    closeAccountSelectModal();
+    launchActiveBuild();
+  });
+  btnSelectLaunchAll?.addEventListener('click', () => {
+    closeAccountSelectModal();
+    btnLaunchAllAccounts?.click();
+  });
+  btnSelectAddAccount?.addEventListener('click', () => {
+    closeAccountSelectModal();
+    btnOpenAddAccount?.click();
+  });
+  accountSelectModal?.addEventListener('click', (e) => {
+    if (e.target === accountSelectModal) closeAccountSelectModal();
+  });
+
+  // Single Unified Cockpit Launch Button opens Account Selection Modal
+  btnCockpitLaunch?.addEventListener('click', openAccountSelectModal);
   btnQuickLaunch?.addEventListener('click', launchActiveBuild);
   btnCockpitSpawn?.addEventListener('click', spawnMultiInstance);
   btnLaunchMore?.addEventListener('click', spawnMultiInstance);
@@ -480,6 +580,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       state.accounts = list || [];
       if (badgeAccountCount) badgeAccountCount.textContent = state.accounts.length;
       renderAccounts();
+      if (accountSelectModal?.classList.contains('active')) renderAccountSelectList();
     } catch (err) {
       log(`Failed to load accounts: ${err.message}`, 'err');
     }
@@ -561,6 +662,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       await window.api.saveAccounts(state.accounts);
       if (badgeAccountCount) badgeAccountCount.textContent = state.accounts.length;
       renderAccounts();
+      if (accountSelectModal?.classList.contains('active')) renderAccountSelectList();
       log('Account removed.', 'ok');
     }
   };
@@ -608,6 +710,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     await window.api.saveAccounts(state.accounts);
     if (badgeAccountCount) badgeAccountCount.textContent = state.accounts.length;
     renderAccounts();
+    if (accountSelectModal?.classList.contains('active')) renderAccountSelectList();
     addAccountModal?.classList.remove('active');
     log(`Added account: ${newAcc.username} (ID: ${newAcc.userId})`, 'ok');
   });
@@ -741,6 +844,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     state.instances = instances || [];
     renderAccounts();
     updateCockpitInstanceChips();
+    if (accountSelectModal?.classList.contains('active')) {
+      renderAccountSelectList();
+    }
 
     if (!pidsTableBody) return;
     if (!instances || instances.length === 0) {
