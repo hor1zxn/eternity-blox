@@ -20,6 +20,7 @@ let mainWindow = null;
 
 // Track active instance sessions mapped to accounts & targets
 const runningInstances = new Map();
+const recentLaunches = [];
 
 function trackInstance(pid, data) {
   runningInstances.set(pid, {
@@ -30,7 +31,7 @@ function trackInstance(pid, data) {
     avatarUrl: data.avatarUrl || null,
     version: data.version || 'Default',
     target: data.target || null,
-    startTime: Date.now()
+    startTime: data.startTime || Date.now()
   });
   broadcastInstances();
 }
@@ -99,23 +100,55 @@ app.whenReady().then(async () => {
   // Broadcast events to renderer
   nativeHelper.on('pids', (pids) => {
     const pidSet = new Set(pids);
-    for (const trackedPid of runningInstances.keys()) {
-      if (!pidSet.has(trackedPid)) {
+    const now = Date.now();
+
+    // 1. Remove stale tracked PIDs that are no longer alive (with a 6-second grace period for newly spawned PIDs)
+    for (const [trackedPid, inst] of runningInstances.entries()) {
+      if (!pidSet.has(trackedPid) && (now - (inst.startTime || 0) > 6000)) {
         runningInstances.delete(trackedPid);
       }
     }
+
+    // 2. Reconcile alive PIDs
     for (const pid of pids) {
-      if (!runningInstances.has(pid)) {
-        runningInstances.set(pid, {
-          pid,
-          accountId: null,
-          username: 'Roblox Client',
-          displayName: `PID ${pid}`,
-          avatarUrl: null,
-          version: 'Active',
-          target: null,
-          startTime: Date.now()
-        });
+      const existing = runningInstances.get(pid);
+      if (!existing || !existing.accountId) {
+        // Look for an unmatched recent launch with an accountId
+        const activeAccountIds = new Set(
+          Array.from(runningInstances.values())
+            .filter(i => i.pid !== pid && i.accountId)
+            .map(i => String(i.accountId))
+        );
+
+        const match = recentLaunches
+          .slice()
+          .reverse()
+          .find(r => r.accountId && !activeAccountIds.has(String(r.accountId)) && (!r.matchedPid || r.matchedPid === pid) && (now - r.timestamp < 60000));
+
+        if (match) {
+          match.matchedPid = pid;
+          runningInstances.set(pid, {
+            pid,
+            accountId: match.accountId,
+            username: match.username,
+            displayName: match.displayName,
+            avatarUrl: match.avatarUrl,
+            version: match.version || 'Active',
+            target: match.target || null,
+            startTime: match.timestamp
+          });
+        } else if (!existing) {
+          runningInstances.set(pid, {
+            pid,
+            accountId: null,
+            username: 'Roblox Client',
+            displayName: `PID ${pid}`,
+            avatarUrl: null,
+            version: 'Active',
+            target: null,
+            startTime: now
+          });
+        }
       }
     }
 
@@ -193,16 +226,22 @@ ipcMain.handle('launcher:spawn', async (event, options) => {
     target
   });
 
+  const launchRecord = {
+    accountId: options.accountId || null,
+    username: options.username || (options.cookie ? 'Account Session' : 'Guest Instance'),
+    displayName: options.displayName || options.username || 'Roblox Instance',
+    avatarUrl: options.avatarUrl || null,
+    version: res.version,
+    target,
+    initialPid: res.pid,
+    timestamp: Date.now(),
+    matchedPid: null
+  };
+  recentLaunches.push(launchRecord);
+  if (recentLaunches.length > 50) recentLaunches.shift();
+
   if (res && res.pid) {
-    trackInstance(res.pid, {
-      pid: res.pid,
-      accountId: options.accountId || null,
-      username: options.username || (options.cookie ? 'Account Session' : 'Guest Instance'),
-      displayName: options.displayName || options.username || 'Roblox Instance',
-      avatarUrl: options.avatarUrl || null,
-      version: res.version,
-      target
-    });
+    trackInstance(res.pid, launchRecord);
   }
 
   return res;

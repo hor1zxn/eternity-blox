@@ -45,10 +45,98 @@ async function getAuthTicket(cookie) {
   }
 }
 
-function parseGameTarget(target) {
+async function resolveShareLink(code, type = 'ExperienceInvite', cookie = null) {
+  let authCookie = cookie;
+  if (!authCookie) {
+    try {
+      const storage = require('./storage');
+      const accounts = storage.loadAccounts();
+      if (accounts && accounts.length > 0 && accounts[0].cookie) {
+        authCookie = accounts[0].cookie;
+      }
+    } catch (e) {
+      console.warn('[ShareLinks] Error loading fallback account cookie:', e.message);
+    }
+  }
+
+  const cookieHeader = authCookie ? (authCookie.trim().startsWith('.ROBLOSECURITY=') ? authCookie.trim() : `.ROBLOSECURITY=${authCookie.trim()}`) : '';
+
+  try {
+    const res1 = await fetch('https://apis.roblox.com/sharelinks/v1/resolve-link', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(cookieHeader ? { 'Cookie': cookieHeader } : {})
+      },
+      body: JSON.stringify({ linkId: code, linkType: type })
+    });
+
+    const csrf = res1.headers.get('x-csrf-token');
+    if (!csrf) return null;
+
+    const res2 = await fetch('https://apis.roblox.com/sharelinks/v1/resolve-link', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-csrf-token': csrf,
+        ...(cookieHeader ? { 'Cookie': cookieHeader } : {})
+      },
+      body: JSON.stringify({ linkId: code, linkType: type })
+    });
+
+    if (!res2.ok) return null;
+    const data = await res2.json();
+
+    if (data.experienceInviteData && data.experienceInviteData.placeId) {
+      const { placeId, instanceId } = data.experienceInviteData;
+      if (instanceId) {
+        return {
+          placeId: String(placeId),
+          gameId: String(instanceId),
+          requestType: 'RequestGameJob'
+        };
+      }
+      return {
+        placeId: String(placeId),
+        requestType: 'RequestGame'
+      };
+    }
+
+    if (data.privateServerInviteData && data.privateServerInviteData.placeId) {
+      const { placeId, linkCode, accessCode } = data.privateServerInviteData;
+      return {
+        placeId: String(placeId),
+        linkCode: linkCode || undefined,
+        accessCode: accessCode || undefined,
+        requestType: 'RequestPrivateGame'
+      };
+    }
+  } catch (err) {
+    console.error('[ShareLinks] Failed to resolve share link:', err.message);
+  }
+
+  return null;
+}
+
+async function parseGameTarget(target, cookie = null) {
   if (!target) return null;
   target = String(target).trim();
   if (!target) return null;
+
+  // Check if target is a Roblox share link (e.g. /share?code=...&type=ExperienceInvite or /share-links?code=...)
+  const codeMatch = target.match(/[?&]code=([a-zA-Z0-9_-]+)/i);
+  if (codeMatch) {
+    const typeMatch = target.match(/[?&]type=([a-zA-Z0-9_-]+)/i);
+    const linkType = typeMatch ? typeMatch[1] : 'ExperienceInvite';
+    const linkId = codeMatch[1];
+    console.log(`[Launcher] Detected share link (Code: ${linkId}, Type: ${linkType}). Resolving via Roblox API...`);
+    const resolved = await resolveShareLink(linkId, linkType, cookie);
+    if (resolved) {
+      console.log(`[Launcher] Successfully resolved share link to placeId ${resolved.placeId}!`);
+      return resolved;
+    }
+    console.warn(`[Launcher] Could not resolve share link with code: ${linkId}`);
+  }
 
   // 1. Raw numeric placeId
   if (/^\d+$/.test(target)) {
@@ -164,7 +252,7 @@ async function launchRobloxInstance({ versionHash = null, cookie = null, target 
     ticket = await getAuthTicket(cookie);
   }
 
-  const parsedTarget = parseGameTarget(target);
+  const parsedTarget = await parseGameTarget(target, cookie);
   const launcherUrl = buildPlaceLauncherUrl(parsedTarget);
   const launchTime = Date.now();
   const browserId = Math.floor(1000000000000 + Math.random() * 9000000000000);

@@ -188,7 +188,9 @@ class NativeHelper extends EventEmitter {
 
   killPid(pid) {
     try {
-      execSync(`taskkill /F /PID ${pid}`, { stdio: 'ignore' });
+      execSync(`taskkill /F /T /PID ${pid}`, { stdio: 'ignore' });
+      this.runningPids = (this.runningPids || []).filter(p => p !== pid);
+      this.emit('pids', this.runningPids);
       return true;
     } catch {
       return false;

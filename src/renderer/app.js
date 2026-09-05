@@ -444,7 +444,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     accountSelectList.innerHTML = state.accounts.map(acc => {
       const avatarSrc = acc.avatarUrl || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="%2352525b"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>';
-      const activeInst = (state.instances || []).find(inst => String(inst.accountId) === String(acc.id));
+      const activeInst = (state.instances || []).find(inst => String(inst.accountId) === String(acc.id) && (state.runningPids.length === 0 || state.runningPids.includes(inst.pid)));
       const isRunning = Boolean(activeInst);
 
       return `
@@ -595,7 +595,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     accountsContainer.innerHTML = state.accounts.map(acc => {
       const avatarSrc = acc.avatarUrl || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="%2352525b"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>';
-      const activeInst = (state.instances || []).find(inst => String(inst.accountId) === String(acc.id));
+      const activeInst = (state.instances || []).find(inst => String(inst.accountId) === String(acc.id) && (state.runningPids.length === 0 || state.runningPids.includes(inst.pid)));
       const isRunning = Boolean(activeInst);
 
       return `
@@ -650,6 +650,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         displayName: acc.nickname || acc.displayName || acc.username,
         avatarUrl: acc.avatarUrl
       });
+      if (res && res.pid) {
+        const optInst = {
+          pid: res.pid,
+          accountId: acc.id,
+          username: acc.username,
+          displayName: acc.nickname || acc.displayName || acc.username,
+          avatarUrl: acc.avatarUrl,
+          version: res.version || state.activeVersion || 'Default',
+          target,
+          startTime: Date.now()
+        };
+        const existingIdx = state.instances.findIndex(i => i.pid === res.pid || String(i.accountId) === String(acc.id));
+        if (existingIdx !== -1) state.instances[existingIdx] = optInst;
+        else state.instances.push(optInst);
+        if (!state.runningPids.includes(res.pid)) state.runningPids.push(res.pid);
+        syncActiveProcesses();
+      }
       log(`Launched ${acc.username} (PID: ${res.pid}) into ${target || 'Home'}!`, 'ok');
     } catch (err) {
       log(`Failed to launch ${acc.username}: ${err.message}`, 'err');
@@ -830,41 +847,87 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   function updatePidsUI(pids) {
-    state.runningPids = pids;
-    const count = pids.length;
+    state.runningPids = pids || [];
+    const count = state.runningPids.length;
     if (instanceCountLabel) instanceCountLabel.textContent = `${count} Running`;
     if (activePidsBadge) activePidsBadge.textContent = `${count} PIDs`;
     if (badgePidsCount) badgePidsCount.textContent = `${count}`;
     if (cockpitPidsVal) cockpitPidsVal.textContent = `${count} PIDs`;
     const cockpitRunningCount = document.getElementById('cockpit-running-count');
     if (cockpitRunningCount) cockpitRunningCount.textContent = `${count} Running`;
+
+    // Ensure all alive PIDs are represented in state.instances
+    const existingPids = new Set((state.instances || []).map(i => i.pid));
+    for (const pid of state.runningPids) {
+      if (!existingPids.has(pid)) {
+        state.instances.push({
+          pid,
+          accountId: null,
+          username: 'Roblox Client',
+          displayName: `PID ${pid}`,
+          avatarUrl: null,
+          version: state.activeVersion || 'Active',
+          target: getTargetGame() || null,
+          startTime: Date.now()
+        });
+      }
+    }
+
+    // Remove stale PIDs that are dead and beyond grace period
+    const now = Date.now();
+    const aliveSet = new Set(state.runningPids);
+    state.instances = (state.instances || []).filter(i => aliveSet.has(i.pid) || (now - (i.startTime || 0) < 6000));
+
+    syncActiveProcesses();
   }
 
   function updateInstancesUI(instances) {
-    state.instances = instances || [];
+    if (instances && instances.length > 0) {
+      for (const inst of instances) {
+        if (!state.runningPids.includes(inst.pid)) state.runningPids.push(inst.pid);
+      }
+      state.instances = instances;
+    }
+    syncActiveProcesses();
+  }
+
+  function syncActiveProcesses() {
     renderAccounts();
+    renderActiveProcessesTable();
     updateCockpitInstanceChips();
     if (accountSelectModal?.classList.contains('active')) {
       renderAccountSelectList();
     }
+  }
 
+  function renderActiveProcessesTable() {
     if (!pidsTableBody) return;
-    if (!instances || instances.length === 0) {
+
+    // Combine all unique active PIDs so none are missed
+    const allPids = Array.from(new Set([
+      ...(state.runningPids || []),
+      ...(state.instances || []).map(i => i.pid)
+    ])).filter(p => p > 0);
+
+    if (allPids.length === 0) {
       pidsTableBody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 24px; color: var(--t3);">No active Roblox instances running.</td></tr>';
       return;
     }
 
-    pidsTableBody.innerHTML = instances.map(inst => {
+    pidsTableBody.innerHTML = allPids.map(pid => {
+      const inst = (state.instances || []).find(i => i.pid === pid) || {};
       const avatarSrc = inst.avatarUrl || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="%2352525b"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>';
       const targetDisp = inst.target ? (inst.target.length > 28 ? inst.target.slice(0, 25) + '...' : inst.target) : 'Home / Default';
+      const displayName = inst.displayName || inst.username || `Roblox Process (${pid})`;
+
       return `
         <tr>
-          <td style="font-family:'JetBrains Mono',monospace; color:#fff; font-weight:600;">${inst.pid}</td>
+          <td style="font-family:'JetBrains Mono',monospace; color:#fff; font-weight:600;">${pid}</td>
           <td>
             <div style="display: flex; align-items: center; gap: 8px;">
               <img src="${avatarSrc}" alt="" style="width: 24px; height: 24px; border-radius: 5px; border: 1px solid rgba(255,255,255,0.12); flex-shrink: 0;">
               <div>
-                <strong style="color: #fff; font-size: 12.5px;">${inst.displayName || inst.username || 'Roblox Instance'}</strong>
+                <strong style="color: #fff; font-size: 12.5px;">${displayName}</strong>
                 ${inst.username && inst.displayName !== inst.username ? `<div style="font-size: 10.5px; color: var(--t3);">@${inst.username}</div>` : ''}
               </div>
             </div>
@@ -872,8 +935,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           <td style="font-family:'JetBrains Mono',monospace; font-size: 11.5px; color: var(--t2);">${targetDisp}</td>
           <td><span class="badge b-white" style="color:var(--green); border-color:rgba(34,197,94,0.3);"><span class="tb-dot" style="background:var(--green); width:5px; height:5px; margin-right:4px;"></span>RUNNING</span></td>
           <td style="text-align: right;">
-            <button class="btn btn-danger btn-sm" onclick="window.killSpecificPid(${inst.pid})" title="Kill PID ${inst.pid}">
-              <span class="material-icons-round" style="font-size: 14px;">close</span>
+            <button class="btn btn-danger btn-sm" onclick="window.killSpecificPid(${pid})" title="Kill PID ${pid}">
+              <span class="material-icons-round" style="font-size: 14px;">power_settings_new</span>
               <span>Kill Instance</span>
             </button>
           </td>
@@ -884,27 +947,34 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function updateCockpitInstanceChips() {
     if (!cockpitRunningChips) return;
-    const instances = state.instances || [];
-    if (instances.length === 0) {
+    const allPids = Array.from(new Set([
+      ...(state.runningPids || []),
+      ...(state.instances || []).map(i => i.pid)
+    ])).filter(p => p > 0);
+
+    if (allPids.length === 0) {
       cockpitRunningChips.innerHTML = '';
       return;
     }
 
-    cockpitRunningChips.innerHTML = instances.map(inst => `
-      <div class="cockpit-instance-chip" title="Account: ${inst.username || 'Instance'} | PID: ${inst.pid}">
-        <span class="chip-dot"></span>
-        <span class="chip-name">${inst.username || 'PID ' + inst.pid}</span>
-        <button class="chip-kill-btn" onclick="window.killSpecificPid(${inst.pid})" title="Kill PID ${inst.pid}">✕</button>
-      </div>
-    `).join('');
+    cockpitRunningChips.innerHTML = allPids.map(pid => {
+      const inst = (state.instances || []).find(i => i.pid === pid);
+      const name = inst?.username && inst.username !== 'Roblox Client' ? `@${inst.username}` : `PID ${pid}`;
+      return `
+        <div class="cockpit-instance-chip" title="Account: ${inst?.username || 'Roblox Client'} | PID: ${pid}">
+          <span class="chip-dot"></span>
+          <span class="chip-name">${name}</span>
+          <button class="chip-kill-btn" onclick="window.killSpecificPid(${pid})" title="Kill PID ${pid}">✕</button>
+        </div>
+      `;
+    }).join('');
   }
 
   window.killSpecificPid = async (pid) => {
-    await window.api.killPid(pid);
     state.instances = (state.instances || []).filter(i => i.pid !== pid);
     state.runningPids = (state.runningPids || []).filter(p => p !== pid);
-    updatePidsUI(state.runningPids);
-    updateInstancesUI(state.instances);
+    syncActiveProcesses();
+    await window.api.killPid(pid);
     log(`Killed Roblox process PID ${pid}`, 'err');
   };
 
