@@ -21,18 +21,15 @@
     </div>
 
     <div class="tb-drag-center">
-      <div class="tb-pill live" id="mutex-pill">
-        <span class="tb-dot"></span>
-        <span id="mutex-label">Multi-Instance Active</span>
-      </div>
-      <div class="tb-pill" id="instances-pill">
-        <span class="material-icons-round" style="font-size:13px">layers</span>
+      <button class="tb-pill" id="instances-pill" title="View Active Processes">
+        <span class="material-icons-round tb-pill-icon">layers</span>
         <span id="instance-count-label">0 Running</span>
-      </div>
-      <div class="tb-pill" id="active-ver-pill">
-        <span class="material-icons-round" style="font-size:13px">tune</span>
+      </button>
+      <button class="tb-pill" id="active-ver-pill" title="View Installed Builds">
+        <span class="material-icons-round tb-pill-icon">memory</span>
+        <span class="tb-pill-prefix">Build:</span>
         <span id="header-active-ver">Default</span>
-      </div>
+      </button>
     </div>
 
     <div class="tb-controls">

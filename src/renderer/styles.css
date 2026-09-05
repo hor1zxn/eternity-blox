@@ -163,53 +163,69 @@ button:focus-visible, .nav-item:focus-visible {
   display: flex;
   align-items: center;
   gap: 8px;
+  -webkit-app-region: no-drag;
 }
 
 .tb-pill {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.07);
-  border-radius: 6px;
-  padding: 3px 10px;
-  font-family: 'JetBrains Mono', monospace;
+  background: rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  padding: 3.5px 12px;
+  font-family: 'Montserrat', sans-serif;
   font-size: 11px;
-  font-weight: 500;
-  color: var(--t2);
-  transition: all var(--dur) var(--smooth);
+  font-weight: 600;
+  letter-spacing: 0.015em;
+  color: #9aa0b6;
+  cursor: pointer;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
 }
 
 .tb-pill:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.18);
   color: #ffffff;
+  transform: translateY(-0.5px);
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.tb-pill-icon {
+  font-size: 13.5px !important;
+  color: #6d738a;
+  transition: color 0.2s;
+}
+
+.tb-pill:hover .tb-pill-icon {
+  color: #ffffff;
+}
+
+.tb-pill-prefix {
+  color: #6d738a;
+  font-weight: 500;
+  font-size: 10.5px;
+}
+
+#header-active-ver {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10.5px;
+  color: #e2e5f0;
 }
 
 .tb-pill.live {
-  background: rgba(34, 197, 94, 0.07);
-  border-color: rgba(34, 197, 94, 0.22);
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.3);
   color: #ffffff;
+  box-shadow: 0 0 12px rgba(34, 197, 94, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.1);
 }
 
-.tb-dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--t3);
-  flex-shrink: 0;
-}
-
-.tb-pill.live .tb-dot {
-  background: var(--green);
-  box-shadow: 0 0 8px var(--green);
-  animation: pulse-dot 2s infinite ease-in-out;
-}
-
-@keyframes pulse-dot {
-  0% { transform: scale(0.92); opacity: 0.75; }
-  50% { transform: scale(1.18); opacity: 1; }
-  100% { transform: scale(0.92); opacity: 0.75; }
+.tb-pill.live .tb-pill-icon {
+  color: var(--green);
+  filter: drop-shadow(0 0 4px var(--green));
 }
 
 .tb-controls {

@@ -565,7 +565,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   function updateActiveVersionDisplay() {
     const disp = state.activeVersion || 'Default';
-    if (headerActiveVer) headerActiveVer.textContent = disp.startsWith('version-') ? disp.slice(0, 16) : disp;
+    const clean = disp.startsWith('version-') ? disp.replace('version-', '').slice(0, 10) : disp;
+    if (headerActiveVer) headerActiveVer.textContent = clean;
     if (badgeActiveVer) badgeActiveVer.textContent = state.activeVersion ? 'Pinned' : 'Target';
     if (sidebarActiveVersion) sidebarActiveVersion.textContent = state.activeVersion || 'Auto (Latest)';
     if (cockpitActiveHash) cockpitActiveHash.textContent = state.activeVersion || 'Auto (Latest)';
@@ -1280,8 +1281,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     const procTab = document.querySelector('.deck-tab[data-view="view-processes"]');
     if (procTab) procTab.click();
   };
+
+  const instancesPill = document.getElementById('instances-pill');
+  const activeVerPill = document.getElementById('active-ver-pill');
   cockpitPidsVal?.addEventListener('click', switchToProcessesTab);
   instanceCountLabel?.addEventListener('click', switchToProcessesTab);
+  instancesPill?.addEventListener('click', switchToProcessesTab);
+  activeVerPill?.addEventListener('click', () => {
+    const buildTab = document.querySelector('.deck-tab[data-view="view-installed"]');
+    if (buildTab) buildTab.click();
+  });
 
   btnSaveTarget?.addEventListener('click', () => {
     const t = getTargetGame();
@@ -1361,6 +1370,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     state.runningPids = pids || [];
     const count = state.runningPids.length;
     if (instanceCountLabel) instanceCountLabel.textContent = `${count} Running`;
+    if (instancesPill) instancesPill.classList.toggle('live', count > 0);
     if (activePidsBadge) activePidsBadge.textContent = `${count} PIDs`;
     if (mixerPidsBadge) mixerPidsBadge.textContent = `${count} PIDs`;
     if (badgePidsCount) badgePidsCount.textContent = `${count}`;
