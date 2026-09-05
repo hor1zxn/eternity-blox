@@ -809,28 +809,38 @@ button:focus-visible, .nav-item:focus-visible {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
-  flex-wrap: wrap;
-  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.instance-mixer-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
 }
 
 .instance-mixer-title {
   display: flex;
   align-items: center;
-  gap: 6px;
-  font-size: 12.5px;
+  gap: 8px;
+  font-size: 13px;
   font-weight: 700;
   color: #ffffff;
+  letter-spacing: -0.01em;
 }
 
 .instance-mixer-title .material-icons-round {
   font-size: 16px;
-  color: var(--t2);
+  color: #a1a1aa;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .instance-mixer-hint {
-  font-size: 11px;
-  color: var(--t3);
+  font-size: 11.5px;
+  color: #71717a;
+  line-height: 1.4;
+  margin-left: 24px;
 }
 
 .instance-mixer-grid {
@@ -843,14 +853,23 @@ button:focus-visible, .nav-item:focus-visible {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: 10px;
   padding: 22px 18px;
   background: rgba(255, 255, 255, 0.015);
   border: 1px dashed rgba(255, 255, 255, 0.08);
   border-radius: 10px;
-  color: var(--t3);
+  color: #71717a;
   font-size: 12px;
   text-align: center;
+}
+
+.instance-mixer-empty .material-icons-round {
+  font-size: 18px;
+  color: #71717a;
+  opacity: 0.8;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .instance-mixer-row {
@@ -2404,10 +2423,30 @@ tbody tr:hover td {
 }
 
 /* FPS Selector active style */
+.fps-sr {
+  align-items: flex-start !important;
+}
+
+.fps-cap-container {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 8px;
+}
+
+.fps-presets-bar {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .fps-btn {
   font-family: 'JetBrains Mono', monospace;
   font-size: 11.5px;
-  min-width: 72px;
+  min-width: 68px;
+  border-radius: 7px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .fps-btn.active {
@@ -2416,6 +2455,42 @@ tbody tr:hover td {
   border-color: #ffffff !important;
   font-weight: 600;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 2px 8px rgba(255, 255, 255, 0.2);
+}
+
+.fps-custom-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 4px 6px;
+  border-radius: 8px;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.fps-custom-field {
+  width: 110px;
+  height: 28px;
+  background: rgba(0, 0, 0, 0.45);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 6px;
+  padding: 0 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11.5px;
+  color: #ffffff;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.fps-custom-field:focus {
+  border-color: rgba(255, 255, 255, 0.4);
+  box-shadow: 0 0 8px rgba(255, 255, 255, 0.1);
+}
+
+.fps-custom-field::-webkit-inner-spin-button,
+.fps-custom-field::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 /* ==========================================================================

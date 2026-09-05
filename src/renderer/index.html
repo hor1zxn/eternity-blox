@@ -320,21 +320,6 @@
           </div>
         </div>
 
-        <!-- Mutex Status Card -->
-        <div class="sc">
-          <div class="sc-head">Singleton Mutex & Multi-Instance Engine</div>
-          <div class="sr">
-            <div class="sr-left">
-              <div class="sr-label">ROBLOX_singletonMutex Bypass</div>
-              <div class="sr-desc">RobloxNative daemon holds the singleton mutex and terminates singleton events in Roblox processes.</div>
-            </div>
-            <div style="display: flex; gap: 8px; align-items: center;">
-              <span class="badge b-white">ACTIVE</span>
-              <span class="badge b-dark" id="mixer-pids-badge">0 PIDs</span>
-            </div>
-          </div>
-        </div>
-
         <!-- Audio Volume Card -->
         <div class="sc">
           <div class="sc-head" style="display: flex; justify-content: space-between; align-items: center;">
@@ -355,11 +340,13 @@
           <!-- Per-Instance Multi-Channel Audio Mixer -->
           <div class="instance-mixer-box">
             <div class="instance-mixer-header">
-              <div class="instance-mixer-title">
-                <span class="material-icons-round">tune</span>
-                <span>Per-Instance Audio Channels</span>
+              <div class="instance-mixer-title-wrap">
+                <div class="instance-mixer-title">
+                  <span class="material-icons-round">tune</span>
+                  <span>Per-Instance Audio Channels</span>
+                </div>
+                <div class="instance-mixer-hint">Control specific sound levels per account and PID independently.</div>
               </div>
-              <div class="instance-mixer-hint">Control specific sound levels per account and PID independently.</div>
             </div>
 
             <div id="instance-mixer-list" class="instance-mixer-grid">
@@ -399,17 +386,23 @@
         <!-- FPS Cap Card -->
         <div class="sc">
           <div class="sc-head">FPS Cap & FastFlags</div>
-          <div class="sr">
+          <div class="sr fps-sr">
             <div class="sr-left">
               <div class="sr-label">Target Framerate</div>
               <div class="sr-desc">Writes <code>DFIntTaskSchedulerTargetFps</code> in ClientAppSettings.json.</div>
             </div>
-            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
-              <button class="btn btn-ghost btn-sm fps-btn" data-fps="60">60 FPS</button>
-              <button class="btn btn-ghost btn-sm fps-btn" data-fps="144">144 FPS</button>
-              <button class="btn btn-ghost btn-sm fps-btn" data-fps="240">240 FPS</button>
-              <button class="btn btn-ghost btn-sm fps-btn" data-fps="360">360 FPS</button>
-              <button class="btn btn-primary btn-sm fps-btn active" data-fps="0">Uncapped</button>
+            <div class="fps-cap-container">
+              <div class="fps-presets-bar">
+                <button class="btn btn-ghost btn-sm fps-btn" data-fps="15">15 FPS</button>
+                <button class="btn btn-ghost btn-sm fps-btn" data-fps="30">30 FPS</button>
+                <button class="btn btn-ghost btn-sm fps-btn" data-fps="60">60 FPS</button>
+                <button class="btn btn-primary btn-sm fps-btn active" data-fps="0">Uncapped</button>
+                <button class="btn btn-ghost btn-sm fps-btn" id="btn-fps-custom" data-fps="custom">Custom</button>
+              </div>
+              <div class="fps-custom-inline" id="fps-custom-inline" style="display: none;">
+                <input type="number" id="input-custom-fps" class="fps-custom-field" placeholder="FPS (e.g. 144)" min="1" max="1000">
+                <button class="btn btn-white btn-sm" id="btn-apply-custom-fps">Apply</button>
+              </div>
             </div>
           </div>
         </div>

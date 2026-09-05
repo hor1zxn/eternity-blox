@@ -394,6 +394,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const instanceMixerList = document.getElementById('instance-mixer-list');
   const mixerActiveChannelsBadge = document.getElementById('mixer-active-channels-badge');
   const fpsButtons = document.querySelectorAll('.fps-btn');
+  const btnFpsCustom = document.getElementById('btn-fps-custom');
+  const fpsCustomInline = document.getElementById('fps-custom-inline');
+  const inputCustomFps = document.getElementById('input-custom-fps');
+  const btnApplyCustomFps = document.getElementById('btn-apply-custom-fps');
 
   // Settings Elements
   const versionsDirDisplay = document.getElementById('versions-dir-display');
@@ -450,6 +454,35 @@ document.addEventListener('DOMContentLoaded', async () => {
       } catch {}
 
       updateActiveVersionDisplay();
+
+      // Restore saved FPS cap selection
+      if (state.settings && state.settings.fpsCap !== undefined) {
+        const savedFps = Number(state.settings.fpsCap);
+        let matched = false;
+        fpsButtons.forEach(b => {
+          if (b.dataset.fps !== 'custom' && parseInt(b.dataset.fps, 10) === savedFps) {
+            fpsButtons.forEach(btn => {
+              btn.classList.remove('btn-primary', 'active');
+              btn.classList.add('btn-ghost');
+            });
+            b.classList.remove('btn-ghost');
+            b.classList.add('btn-primary', 'active');
+            matched = true;
+          }
+        });
+        if (!matched && savedFps > 0) {
+          fpsButtons.forEach(btn => {
+            btn.classList.remove('btn-primary', 'active');
+            btn.classList.add('btn-ghost');
+          });
+          if (btnFpsCustom) {
+            btnFpsCustom.classList.remove('btn-ghost');
+            btnFpsCustom.classList.add('btn-primary', 'active');
+            btnFpsCustom.textContent = `Custom (${savedFps})`;
+          }
+          if (inputCustomFps) inputCustomFps.value = savedFps;
+        }
+      }
     } catch (err) {
       log(`Initialization error: ${err.message}`, 'err');
     }
@@ -1333,18 +1366,65 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   fpsButtons.forEach(btn => {
     btn.addEventListener('click', async () => {
+      const mode = btn.dataset.fps;
+      if (mode === 'custom') {
+        const isHidden = fpsCustomInline.style.display === 'none';
+        fpsCustomInline.style.display = isHidden ? 'flex' : 'none';
+        if (isHidden && inputCustomFps) {
+          inputCustomFps.focus();
+        }
+        return;
+      }
+
+      if (fpsCustomInline) fpsCustomInline.style.display = 'none';
+      if (btnFpsCustom) btnFpsCustom.textContent = 'Custom';
+
       fpsButtons.forEach(b => {
         b.classList.remove('btn-primary', 'active');
         b.classList.add('btn-ghost');
       });
       btn.classList.remove('btn-ghost');
       btn.classList.add('btn-primary', 'active');
-      const fps = parseInt(btn.dataset.fps, 10);
+
+      const fps = parseInt(mode, 10);
+      if (state.settings) state.settings.fpsCap = fps;
       if (state.activeVersion) {
         await window.api.applyFpsCap({ versionHash: state.activeVersion, fpsCap: fps });
         log(`Applied ${fps === 0 ? 'Uncapped' : fps + ' FPS'} to ${state.activeVersion}`, 'ok');
       }
     });
+  });
+
+  const applyCustomFps = async () => {
+    const val = parseInt(inputCustomFps?.value, 10);
+    if (isNaN(val) || val <= 0) {
+      inputCustomFps?.focus();
+      return;
+    }
+
+    fpsButtons.forEach(b => {
+      b.classList.remove('btn-primary', 'active');
+      b.classList.add('btn-ghost');
+    });
+    if (btnFpsCustom) {
+      btnFpsCustom.classList.remove('btn-ghost');
+      btnFpsCustom.classList.add('btn-primary', 'active');
+      btnFpsCustom.textContent = `Custom (${val})`;
+    }
+
+    if (state.settings) state.settings.fpsCap = val;
+    if (state.activeVersion) {
+      await window.api.applyFpsCap({ versionHash: state.activeVersion, fpsCap: val });
+      log(`Applied Custom ${val} FPS to ${state.activeVersion}`, 'ok');
+    }
+  };
+
+  btnApplyCustomFps?.addEventListener('click', applyCustomFps);
+  inputCustomFps?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      applyCustomFps();
+    }
   });
 
   // --- SETTINGS TAB ---

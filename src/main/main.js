@@ -260,6 +260,7 @@ ipcMain.handle('versions:delete', (event, versionHash) => {
 });
 
 ipcMain.handle('versions:apply-fps-cap', (event, { versionHash, fpsCap }) => {
+  storage.updateSettings({ fpsCap });
   return writeFpsCapToVersion(versionHash, fpsCap);
 });
 
