@@ -1525,11 +1525,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Credits & Community Actions
   window.copyDevDiscord = (btn) => {
-    navigator.clipboard.writeText('@hor1zxn');
+    navigator.clipboard.writeText('hor1zxn.');
     if (btn) {
       const label = btn.querySelector('.credit-btn-label') || btn;
       const oldText = label.textContent;
-      label.textContent = 'Copied @hor1zxn!';
+      label.textContent = 'Copied hor1zxn.!';
       btn.style.background = 'var(--green)';
       btn.style.borderColor = 'var(--green)';
       btn.style.color = '#000000';
@@ -1540,7 +1540,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         btn.style.color = '';
       }, 2000);
     }
-    log('Copied Developer Discord: @hor1zxn', 'ok');
+    log('Copied Developer Discord: hor1zxn.', 'ok');
   };
 
   window.joinEternityDiscord = () => {
