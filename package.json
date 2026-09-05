@@ -8,10 +8,14 @@
   "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "compile-native": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe /nologo /optimize+ /platform:x64 /target:exe /r:System.Drawing.dll /out:resources\\RobloxNative.exe resources\\RobloxNative.cs",
+    "compile-native": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe /nologo /optimize+ /platform:x64 /target:exe /r:System.Drawing.dll /r:System.Windows.Forms.dll /out:resources\\RobloxNative.exe resources\\RobloxNative.cs",
     "pack": "electron-builder --dir",
     "dist": "electron-builder -w nsis",
     "dist:portable": "electron-builder -w portable"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/hor1zxn/eternity-blox.git"
   },
   "keywords": [
     "roblox",
@@ -27,6 +31,13 @@
     "directories": {
       "output": "dist"
     },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "hor1zxn",
+        "repo": "eternity-blox"
+      }
+    ],
     "files": [
       "src/**/*",
       "resources/**/*",
@@ -38,17 +49,22 @@
     ],
     "extraResources": [
       "resources/RobloxNative.exe",
-      "resources/icon.ico"
+      "resources/icon.ico",
+      "resources/arrange-windows.ps1"
     ],
     "win": {
       "target": [
         {
           "target": "nsis",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         },
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ],
       "icon": "resources/icon.ico"
@@ -63,7 +79,8 @@
   },
   "dependencies": {
     "adm-zip": "^0.5.16",
-    "axios": "^1.7.9"
+    "axios": "^1.7.9",
+    "electron-updater": "^6.8.9"
   },
   "devDependencies": {
     "electron": "^34.2.0",

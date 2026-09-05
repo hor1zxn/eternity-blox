@@ -235,6 +235,9 @@ function resolveExecutable(versionHash) {
   return null;
 }
 
+let lastSpawnPid = null;
+let lastSpawnTime = 0;
+
 async function launchRobloxInstance({ versionHash = null, cookie = null, target = null }) {
   const resolved = resolveExecutable(versionHash);
   if (!resolved) {
@@ -244,12 +247,12 @@ async function launchRobloxInstance({ versionHash = null, cookie = null, target 
   const { exePath, version } = resolved;
   console.log(`[Launcher] Launching Roblox (${version}) at ${exePath}`);
 
-  // CRITICAL: Close singleton handles in all running instances right before spawn!
-  await nativeHelper.closeHandles();
-
   let ticket = null;
   if (cookie) {
     ticket = await getAuthTicket(cookie);
+    if (!ticket) {
+      throw new Error('Failed to acquire Roblox authentication ticket. The account session/cookie may have expired or is invalid.');
+    }
   }
 
   const parsedTarget = await parseGameTarget(target, cookie);
@@ -266,11 +269,31 @@ async function launchRobloxInstance({ versionHash = null, cookie = null, target 
     console.log('[Launcher] Opening authenticated App Home');
   }
 
+  // Fast Mutex Handshake: If another instance was spawned recently (< 15s ago),
+  // actively poll until its singleton event is registered & closed (takes only ~2s instead of 15s!)
+  if (lastSpawnPid && (Date.now() - lastSpawnTime < 15000)) {
+    console.log(`[Launcher] Previous instance PID ${lastSpawnPid} spawned recently. Running fast singleton handshake...`);
+    await nativeHelper.fastSingletonHandshake(4500);
+  } else {
+    // Ensure singleton handles across running clients are cleared
+    await nativeHelper.closeHandles();
+  }
+
   const child = spawn(exePath, [launchArg], {
     detached: true,
     stdio: 'ignore'
   });
   child.unref();
+
+  lastSpawnPid = child.pid;
+  lastSpawnTime = Date.now();
+
+  // Automatically snap window into 2x2 layout tile the instant its game window appears
+  nativeHelper.waitForWindow(child.pid, 12000).then(ready => {
+    if (ready) {
+      nativeHelper.tile2x2();
+    }
+  }).catch(() => {});
 
   return {
     success: true,
@@ -283,13 +306,12 @@ async function launchRobloxInstance({ versionHash = null, cookie = null, target 
 async function launchMultipleInstances(count = 1, options = {}) {
   const results = [];
   for (let i = 0; i < count; i++) {
-    if (i > 0) {
-      // Stagger launches
-      await new Promise(r => setTimeout(r, 1200));
-    }
     try {
       const res = await launchRobloxInstance(options);
       results.push(res);
+      if (res && res.pid && i < count - 1) {
+        await nativeHelper.fastSingletonHandshake(4500);
+      }
     } catch (err) {
       results.push({ success: false, error: err.message });
     }

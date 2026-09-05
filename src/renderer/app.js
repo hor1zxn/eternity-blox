@@ -176,7 +176,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const cockpitToggleAfk = document.getElementById('cockpit-toggle-afk');
   const cockpitAfkLabel = document.getElementById('cockpit-afk-label');
   const cockpitBtnTile = document.getElementById('cockpit-btn-tile');
-  const cockpitBtnSplit = document.getElementById('cockpit-btn-split');
   const cockpitBtnKill = document.getElementById('cockpit-btn-kill');
   const cockpitRunningChips = document.getElementById('cockpit-running-chips');
   const badgeInstalledCount = document.getElementById('badge-installed-count');
@@ -378,7 +377,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnRefreshProcesses = document.getElementById('btn-refresh-processes');
   const btnKillAllProcesses = document.getElementById('btn-kill-all-processes');
   const btnArrangeGridProc = document.getElementById('btn-arrange-grid-proc');
-  const btnArrangeSplitProc = document.getElementById('btn-arrange-split-proc');
   const procMutexPill = document.getElementById('proc-mutex-pill');
   const mixerPidsBadge = document.getElementById('mixer-pids-badge');
 
@@ -389,7 +387,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const afkSlider = document.getElementById('afk-slider');
   const afkCadenceLabel = document.getElementById('afk-cadence-label');
   const btnArrangeGrid = document.getElementById('btn-arrange-grid');
-  const btnArrangeSplit = document.getElementById('btn-arrange-split');
   const pidsTableBody = document.getElementById('pids-table-body');
   const instanceMixerList = document.getElementById('instance-mixer-list');
   const mixerActiveChannelsBadge = document.getElementById('mixer-active-channels-badge');
@@ -847,8 +844,8 @@ document.addEventListener('DOMContentLoaded', async () => {
           </div>
           <div class="account-select-right">
             ${isRunning ? `
-              <span class="badge b-white" style="color:var(--green); border-color:rgba(34,197,94,0.3); font-size:10.5px;">
-                <span class="tb-dot" style="background:var(--green); width:5px; height:5px; margin-right:4px;"></span>RUNNING (${activeInst.pid})
+              <span class="badge b-white" style="color:#ffffff; border-color:rgba(255,255,255,0.25); font-size:10.5px;">
+                <span class="tb-dot" style="background:#ffffff; width:5px; height:5px; margin-right:4px;"></span>RUNNING (${activeInst.pid})
               </span>
               <button class="btn btn-danger btn-sm" style="padding: 4px 8px;" onclick="event.stopPropagation(); window.killSpecificPid(${activeInst.pid});" title="Kill PID ${activeInst.pid}">
                 <span class="material-icons-round" style="font-size: 14px;">power_settings_new</span>
@@ -924,15 +921,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  cockpitBtnTile?.addEventListener('click', () => {
-    window.api.arrangeWindows('grid');
-    log('Arranged Roblox windows in 2x2 grid.', 'ok');
-  });
+  const handleTile2x2 = async () => {
+    try {
+      const res = await window.api.tile2x2();
+      const count = (res && typeof res === 'object') ? res.count : (typeof res === 'number' ? res : 0);
+      if (count > 0) {
+        log(`Arranged ${count} Roblox window(s) in strict 2x2 grid.`, 'ok');
+      } else {
+        log('No active Roblox windows found to arrange.', 'info');
+      }
+    } catch (err) {
+      log(`Failed to tile windows: ${err.message}`, 'err');
+    }
+  };
 
-  cockpitBtnSplit?.addEventListener('click', () => {
-    window.api.arrangeWindows('split');
-    log('Arranged Roblox windows side-by-side.', 'ok');
-  });
+  cockpitBtnTile?.addEventListener('click', handleTile2x2);
 
   cockpitBtnKill?.addEventListener('click', () => {
     window.api.killAllRoblox();
@@ -1119,8 +1122,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         syncActiveProcesses();
       }
       log(`Launched ${acc.username} (PID: ${res.pid}) into ${target || 'Home'}!`, 'ok');
+      return res?.pid || null;
     } catch (err) {
       log(`Failed to launch ${acc.username}: ${err.message}`, 'err');
+      await window.showAlert({
+        title: 'Launch Failed',
+        message: err.message,
+        type: 'danger',
+        icon: 'error_outline'
+      });
+      throw err;
     }
   };
 
@@ -1329,25 +1340,59 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
       return;
     }
-    const target = getTargetGame();
-    log(`Launching all ${state.accounts.length} accounts into ${target || 'Home'} in staggered sequence...`);
-    for (let i = 0; i < state.accounts.length; i++) {
-      const acc = state.accounts[i];
-      if (i > 0) await new Promise(r => setTimeout(r, 1400));
-      try {
-        // Zero-Trust: Main process resolves cookie from DPAPI via accountId
-        await window.api.launchInstance({
-          versionHash: state.activeVersion,
-          target,
-          accountId: acc.id,
-          username: acc.username,
-          displayName: acc.nickname || acc.displayName || acc.username,
-          avatarUrl: acc.avatarUrl
-        });
-        log(`Launched account ${acc.username} (${i + 1}/${state.accounts.length})`, 'ok');
-      } catch (err) {
-        log(`Error launching ${acc.username}: ${err.message}`, 'err');
+
+    if (btnLaunchAllAccounts.disabled) return;
+    btnLaunchAllAccounts.disabled = true;
+    const origHtml = btnLaunchAllAccounts.innerHTML;
+    btnLaunchAllAccounts.innerHTML = '<span class="material-icons-round" style="font-size:14px; animation:spin 1s infinite linear;">sync</span><span>Launching Batch...</span>';
+
+    try {
+      const target = getTargetGame();
+      const slotNames = ['Top-Left', 'Top-Right', 'Bottom-Left', 'Bottom-Right'];
+      log(`Launching all ${state.accounts.length} accounts into ${target || 'Home'} (Strict 2x2 Layout)...`, 'info');
+      for (let i = 0; i < state.accounts.length; i++) {
+        const acc = state.accounts[i];
+        const slot = i % 4;
+        btnLaunchAllAccounts.innerHTML = `<span class="material-icons-round" style="font-size:14px; animation:spin 1s infinite linear;">sync</span><span>Launching ${acc.username} (${i + 1}/${state.accounts.length})...</span>`;
+        log(`[${i + 1}/${state.accounts.length}] Launching ${acc.username} into 2x2 Slot ${slot + 1} (${slotNames[slot]})...`, 'info');
+
+        let spawnedPid = null;
+        try {
+          spawnedPid = await window.launchAccount(acc.id);
+        } catch (err) {
+          log(`Error launching ${acc.username}: ${err.message}`, 'err');
+          continue;
+        }
+
+        // Fast Singleton Mutex Handshake:
+        // Actively poll until singleton event is registered & closed (~2s instead of 18s!)
+        if (i < state.accounts.length - 1 && spawnedPid) {
+          btnLaunchAllAccounts.innerHTML = `<span class="material-icons-round" style="font-size:14px; animation:spin 1s infinite linear;">sync</span><span>Clearing Mutex...</span>`;
+          log(`Clearing singleton event mutex for next account...`, 'info');
+
+          const startCheck = Date.now();
+          let cleared = false;
+          while (Date.now() - startCheck < 4000) {
+            const closed = await window.api.closeSingletonHandles();
+            if (closed > 0) {
+              cleared = true;
+              log(`Singleton handle cleared (${closed}) in ${Date.now() - startCheck}ms!`, 'ok');
+              break;
+            }
+            await new Promise(r => setTimeout(r, 250));
+          }
+          await new Promise(r => setTimeout(r, 250));
+        }
       }
+      log(`All ${state.accounts.length} account launch sequences completed!`, 'ok');
+
+      // Strict 2x2 layout tile pass: snaps all opened windows into smallest 2x2 windowed quadrants
+      setTimeout(() => {
+        if (window.api.tile2x2) window.api.tile2x2();
+      }, 1200);
+    } finally {
+      btnLaunchAllAccounts.disabled = false;
+      btnLaunchAllAccounts.innerHTML = origHtml;
     }
   });
 
@@ -1369,15 +1414,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     log('Refreshed active process list.', 'ok');
   });
 
-  btnArrangeGridProc?.addEventListener('click', () => {
-    window.api.arrangeWindows('grid');
-    log('Arranged Roblox windows in 2x2 grid.', 'ok');
-  });
-
-  btnArrangeSplitProc?.addEventListener('click', () => {
-    window.api.arrangeWindows('split');
-    log('Arranged Roblox windows side-by-side.', 'ok');
-  });
+  btnArrangeGridProc?.addEventListener('click', handleTile2x2);
 
   const switchToProcessesTab = () => {
     const procTab = document.querySelector('.deck-tab[data-view="view-processes"]');
@@ -1423,15 +1460,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  btnArrangeGrid?.addEventListener('click', () => {
-    window.api.arrangeWindows('grid');
-    log('Arranged Roblox windows in 2x2 grid.', 'ok');
-  });
-
-  btnArrangeSplit?.addEventListener('click', () => {
-    window.api.arrangeWindows('split');
-    log('Arranged Roblox windows side-by-side.', 'ok');
-  });
+  btnArrangeGrid?.addEventListener('click', handleTile2x2);
 
   fpsButtons.forEach(btn => {
     btn.addEventListener('click', async () => {

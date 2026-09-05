@@ -37,7 +37,12 @@ contextBridge.exposeInMainWorld('api', {
   setInstanceVolume: (pid, percent) => ipcRenderer.invoke('native:set-instance-volume', pid, percent),
   setAntiAfk: (seconds) => ipcRenderer.invoke('native:set-antiafk', seconds),
   getStatus: () => ipcRenderer.invoke('native:get-status'),
+  isInstanceWindowReady: (pid) => ipcRenderer.invoke('native:is-window-ready', pid),
+  closeSingletonHandles: () => ipcRenderer.invoke('native:close-singleton-handles'),
+  getRunningPids: () => ipcRenderer.invoke('native:get-pids'),
   arrangeWindows: (mode) => ipcRenderer.invoke('native:arrange-windows', mode),
+  tile2x2: (pid, slot) => ipcRenderer.invoke('native:tile-2x2', pid, slot),
+  checkForUpdates: () => ipcRenderer.invoke('updater:check'),
   onPidsUpdated: (cb) => {
     const listener = (event, pids) => cb(pids);
     ipcRenderer.on('pids-updated', listener);

@@ -13,6 +13,8 @@ class NativeHelper extends EventEmitter {
     this.runningPids = [];
     this.mutexHeld = false;
     this.isShuttingDown = false;
+    this.restartAttempts = 0;
+    this.lastStartTime = 0;
     this.exePath = this.resolveExecutablePath();
     this.csPath = path.join(__dirname, '..', '..', 'resources', 'RobloxNative.cs');
   }
@@ -41,7 +43,7 @@ class NativeHelper extends EventEmitter {
       throw new Error(`Native source not found at ${this.csPath}`);
     }
     console.log('[NativeHelper] Compiling RobloxNative.exe...');
-    const cmd = `"${cscPath}" /nologo /optimize+ /platform:x64 /target:exe /r:System.Drawing.dll /out:"${this.exePath}" "${this.csPath}"`;
+    const cmd = `"${cscPath}" /nologo /optimize+ /platform:x64 /target:exe /r:System.Drawing.dll /r:System.Windows.Forms.dll /out:"${this.exePath}" "${this.csPath}"`;
     execSync(cmd, { stdio: 'pipe' });
     return fs.existsSync(this.exePath);
   }
@@ -53,9 +55,25 @@ class NativeHelper extends EventEmitter {
   }
 
   start() {
-    if (this.child) return;
+    if (this.child || this.isShuttingDown) return;
     this.ensureExecutable();
-    this.sweepStrayHelpers();
+
+    const now = Date.now();
+    if (now - this.lastStartTime < 4000) {
+      this.restartAttempts++;
+    } else {
+      this.restartAttempts = 0;
+    }
+    this.lastStartTime = now;
+
+    if (this.restartAttempts >= 4) {
+      console.warn('[NativeHelper] Native helper failed repeatedly. Suspending auto-restart to prevent spam.');
+      return;
+    }
+
+    if (this.restartAttempts === 0) {
+      this.sweepStrayHelpers();
+    }
 
     console.log('[NativeHelper] Spawning RobloxNative.exe daemon...');
     this.child = spawn(this.exePath, ['daemon'], {
@@ -76,9 +94,15 @@ class NativeHelper extends EventEmitter {
       this.mutexHeld = false;
       this.emit('mutex-status', false);
 
-      // Auto-restart if not shutting down
-      if (!this.isShuttingDown) {
-        setTimeout(() => this.start(), 1500);
+      if (code === 3) {
+        // Exit code 3 is DUPLICATE helper. Do not loop-restart.
+        return;
+      }
+
+      // Auto-restart with safe backoff if not shutting down
+      if (!this.isShuttingDown && this.restartAttempts < 4) {
+        const delay = Math.min(2000 * Math.pow(1.5, this.restartAttempts), 10000);
+        setTimeout(() => this.start(), delay);
       }
     });
 
@@ -147,12 +171,103 @@ class NativeHelper extends EventEmitter {
 
   async closeHandles() {
     try {
-      await this.send('closehandles');
-      return true;
+      const res = await this.send('closehandles');
+      const count = parseInt(res, 10) || 0;
+      console.log(`[NativeHelper] Closed ${count} singleton handle(s)`);
+      return count;
     } catch (err) {
       console.warn('[NativeHelper] closehandles warning:', err.message);
-      return false;
+      return 0;
     }
+  }
+
+  async getWindows() {
+    try {
+      const res = await this.send('windows');
+      if (!res) return [];
+      return res.split(',').map(x => parseInt(x.trim(), 10)).filter(x => !isNaN(x));
+    } catch {
+      return [];
+    }
+  }
+
+  async isWindowReady(pid) {
+    if (!pid) return false;
+    const targetPid = Number(pid);
+    try {
+      const wins = await this.getWindows();
+      if (wins.includes(targetPid)) return true;
+    } catch {}
+
+    try {
+      const out = execSync(`powershell -NoProfile -Command "(Get-Process -Id ${targetPid} -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 }).Id"`, {
+        timeout: 1000,
+        stdio: ['ignore', 'pipe', 'ignore']
+      }).toString().trim();
+      const matched = parseInt(out, 10);
+      if (matched === targetPid) return true;
+    } catch {}
+
+    return false;
+  }
+
+  async waitForWindow(pid, maxWaitMs = 15000) {
+    const start = Date.now();
+    const targetPid = Number(pid);
+    while (Date.now() - start < maxWaitMs) {
+      const ready = await this.isWindowReady(targetPid);
+      if (ready) return true;
+
+      const pids = await this.getPids();
+      if (!pids.includes(targetPid)) return false;
+
+      await new Promise(r => setTimeout(r, 300));
+    }
+    return false;
+  }
+
+  async tile2x2(targetPid = -1, slot = -1) {
+    try {
+      let res;
+      if (targetPid > 0 && slot >= 0) {
+        res = await this.send('tile2x2', String(targetPid), String(slot));
+      } else {
+        res = await this.send('tile2x2');
+      }
+      const count = parseInt(res, 10);
+      return { success: true, count: isNaN(count) ? 0 : count };
+    } catch (err) {
+      console.warn('[NativeHelper] tile2x2 error:', err.message);
+      try {
+        const psScript = path.join(__dirname, '..', '..', 'resources', 'arrange-windows.ps1');
+        if (fs.existsSync(psScript)) {
+          const out = execSync(`powershell -NoProfile -ExecutionPolicy Bypass -File "${psScript}" -Mode grid`, {
+            timeout: 4000,
+            stdio: ['ignore', 'pipe', 'ignore']
+          }).toString().trim();
+          const count = parseInt(out, 10) || 0;
+          return { success: true, count, fallback: true };
+        }
+      } catch (psErr) {
+        console.warn('[NativeHelper] PowerShell tile2x2 fallback error:', psErr.message);
+      }
+      return { success: false, error: err.message, count: 0 };
+    }
+  }
+
+  async fastSingletonHandshake(timeoutMs = 4500) {
+    const start = Date.now();
+    while (Date.now() - start < timeoutMs) {
+      const closed = await this.closeHandles();
+      if (closed > 0) {
+        console.log(`[NativeHelper] Fast handshake cleared ${closed} singleton handle(s) in ${Date.now() - start}ms`);
+        await new Promise(r => setTimeout(r, 200));
+        return closed;
+      }
+      await new Promise(r => setTimeout(r, 250));
+    }
+    // Safety fallback
+    return await this.closeHandles();
   }
 
   async setMutex(enabled) {

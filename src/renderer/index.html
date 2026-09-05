@@ -96,13 +96,9 @@
             <span class="material-icons-round">shield</span>
             <span id="cockpit-afk-label">Anti-AFK: ON</span>
           </button>
-          <button class="flight-tool-chip" id="cockpit-btn-tile">
+          <button class="flight-tool-chip" id="cockpit-btn-tile" title="Arrange all Roblox windows in a strict 2x2 quadrant grid">
             <span class="material-icons-round">grid_view</span>
-            <span>Tile Grid (2x2)</span>
-          </button>
-          <button class="flight-tool-chip" id="cockpit-btn-split">
-            <span class="material-icons-round">view_column</span>
-            <span>Split Windows</span>
+            <span>Tile 2x2 Grid</span>
           </button>
         </div>
 
@@ -153,6 +149,9 @@
         </button>
       </nav>
     </div>
+
+    <!-- Global Ambient App Watermark in Bottom-Right -->
+    <div class="app-bg-watermark" aria-hidden="true"></div>
 
     <!-- WORKSPACE VIEWS CONTAINER -->
     <main id="deck-workspace">
@@ -268,16 +267,12 @@
           <div class="sr">
             <div class="sr-left">
               <div class="sr-label">Display & Window Tile Tools</div>
-              <div class="sr-desc">Instantly tile or split running Roblox game windows across your primary display.</div>
+              <div class="sr-desc">Instantly tile running Roblox game windows in a strict 2x2 quadrant layout across your primary display.</div>
             </div>
-            <div style="display: flex; gap: 8px;">
+            <div>
               <button class="btn btn-ghost btn-sm" id="btn-arrange-grid-proc">
                 <span class="material-icons-round">grid_view</span>
                 <span>Tile 2x2 Grid</span>
-              </button>
-              <button class="btn btn-ghost btn-sm" id="btn-arrange-split-proc">
-                <span class="material-icons-round">view_column</span>
-                <span>Split Left / Right</span>
               </button>
             </div>
           </div>
@@ -413,16 +408,12 @@
           <div class="sr">
             <div class="sr-left">
               <div class="sr-label">Screen Grid Layout</div>
-              <div class="sr-desc">Automatically tiles all open Roblox windows across your primary display.</div>
+              <div class="sr-desc">Automatically tiles all open Roblox windows into a strict 2x2 quadrant layout across your primary display.</div>
             </div>
-            <div style="display: flex; gap: 8px;">
+            <div>
               <button class="btn btn-ghost btn-sm" id="btn-arrange-grid">
                 <span class="material-icons-round">grid_view</span>
                 <span>Tile 2x2 Grid</span>
-              </button>
-              <button class="btn btn-ghost btn-sm" id="btn-arrange-split">
-                <span class="material-icons-round">view_column</span>
-                <span>Split Left / Right</span>
               </button>
             </div>
           </div>

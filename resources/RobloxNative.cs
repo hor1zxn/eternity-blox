@@ -69,6 +69,7 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Windows.Forms;
 
 internal static class RobloxNative
 {
@@ -473,7 +474,7 @@ internal static class HandleCloser
                             {
                                 IntPtr strPtr = Marshal.ReadIntPtr(nameBuf, IntPtr.Size == 8 ? 8 : 4);
                                 string name = Marshal.PtrToStringUni(strPtr, len / 2);
-                                if (name != null && name.Contains("ROBLOX_singletonEvent"))
+                                if (name != null && (name.Contains("ROBLOX_singletonEvent") || name.Contains("ROBLOX_singletonMutex")))
                                 {
                                     IntPtr dummy;
                                     DuplicateHandle(srcProc, entry.HandleValue, IntPtr.Zero, out dummy, 0, false, DUPLICATE_CLOSE_SOURCE);
@@ -642,6 +643,68 @@ internal static class AntiAfk
 
     static readonly Random _rng = new Random();
 
+    [DllImport("user32.dll")] public static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
+    [DllImport("user32.dll")] public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+    [DllImport("user32.dll")] public static extern bool IsZoomed(IntPtr hWnd);
+
+    // Strictly arrange windows in 2x2 grid (smallest clean windowed layout)
+    public static int TileWindows2x2(int targetPid = -1, int targetSlot = -1)
+    {
+        try
+        {
+            var screen = Screen.PrimaryScreen.WorkingArea;
+            int screenW = screen.Width;
+            int screenH = screen.Height;
+            int startX = screen.X;
+            int startY = screen.Y;
+
+            int tileW = screenW / 2;
+            int tileH = screenH / 2;
+
+            var wins = EnumRobloxWindows();
+            if (wins.Count == 0) return 0;
+
+            if (targetPid > 0 && wins.ContainsKey((uint)targetPid))
+            {
+                IntPtr hWnd = wins[(uint)targetPid];
+                int s = targetSlot >= 0 ? (targetSlot % 4) : 0;
+                int col = s % 2;
+                int row = s / 2;
+                int x = startX + (col * tileW);
+                int y = startY + (row * tileH);
+                ShowWindow(hWnd, SW_RESTORE);
+                MoveWindow(hWnd, x, y, tileW, tileH, true);
+                SetWindowPos(hWnd, IntPtr.Zero, x, y, tileW, tileH, 0x0014); // SWP_NOZORDER | SWP_NOACTIVATE
+                return 1;
+            }
+
+            var sortedPids = new System.Collections.Generic.List<uint>(wins.Keys);
+            sortedPids.Sort();
+
+            int tiledCount = 0;
+            for (int i = 0; i < sortedPids.Count; i++)
+            {
+                int s = i % 4;
+                int col = s % 2;
+                int row = s / 2;
+                int x = startX + (col * tileW);
+                int y = startY + (row * tileH);
+
+                IntPtr hWnd = wins[sortedPids[i]];
+                ShowWindow(hWnd, SW_RESTORE);
+                MoveWindow(hWnd, x, y, tileW, tileH, true);
+                SetWindowPos(hWnd, IntPtr.Zero, x, y, tileW, tileH, 0x0014);
+                tiledCount++;
+            }
+            return tiledCount;
+        }
+        catch (Exception ex)
+        {
+            Daemon.Warn("TileWindows2x2: " + ex.Message);
+            return 0;
+        }
+    }
+
     static uint PidOf(IntPtr hWnd)
     {
         if (hWnd == IntPtr.Zero) return 0;
@@ -649,23 +712,39 @@ internal static class AntiAfk
     }
 
     // pid -> main visible window, for every running Roblox client.
-    static System.Collections.Generic.Dictionary<uint, IntPtr> EnumRobloxWindows()
+    public static System.Collections.Generic.Dictionary<uint, IntPtr> EnumRobloxWindows()
     {
         var robloxPids = new System.Collections.Generic.HashSet<uint>();
+        var map = new System.Collections.Generic.Dictionary<uint, IntPtr>();
+
         foreach (var p in Process.GetProcessesByName("RobloxPlayerBeta"))
         {
-            try { robloxPids.Add((uint)p.Id); } catch { }
+            try 
+            { 
+                uint pid = (uint)p.Id;
+                robloxPids.Add(pid); 
+                if (p.MainWindowHandle != IntPtr.Zero)
+                {
+                    map[pid] = p.MainWindowHandle;
+                }
+            } 
+            catch { }
         }
-        var map = new System.Collections.Generic.Dictionary<uint, IntPtr>();
+
         if (robloxPids.Count == 0) return map;
+
         EnumWindows((hWnd, lp) =>
         {
             if (!IsWindowVisible(hWnd)) return true;
             if (GetWindowTextLength(hWnd) == 0) return true; // main game window has a title
             uint pid; GetWindowThreadProcessId(hWnd, out pid);
-            if (robloxPids.Contains(pid) && !map.ContainsKey(pid)) map[pid] = hWnd;
+            if (robloxPids.Contains(pid) && !map.ContainsKey(pid)) 
+            {
+                map[pid] = hWnd;
+            }
             return true;
         }, IntPtr.Zero);
+
         return map;
     }
 
@@ -1019,6 +1098,27 @@ internal static class Daemon
                 case "pids":
                     Reply(id, PidList());
                     break;
+
+                case "windows":
+                {
+                    var wins = AntiAfk.EnumRobloxWindows();
+                    var pidsWithWindows = new System.Collections.Generic.List<string>();
+                    foreach (var wPid in wins.Keys) pidsWithWindows.Add(wPid.ToString());
+                    Reply(id, string.Join(",", pidsWithWindows));
+                    break;
+                }
+
+                case "tile":
+                case "tile2x2":
+                {
+                    int targetPid = -1;
+                    int slot = -1;
+                    if (p.Length > 2) int.TryParse(p[2], out targetPid);
+                    if (p.Length > 3) int.TryParse(p[3], out slot);
+                    int count = AntiAfk.TileWindows2x2(targetPid, slot);
+                    Reply(id, count.ToString());
+                    break;
+                }
 
                 case "closehandles":
                 {

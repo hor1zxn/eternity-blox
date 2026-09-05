@@ -187,14 +187,21 @@ function loadAccounts(autoUpgrade = true) {
  * This is the ONLY structure ever exposed to the renderer / UI.
  */
 function getSanitizedAccounts() {
-  const accounts = loadAccounts();
-  return accounts.map(acc => {
-    const { cookie, ...sanitized } = acc;
-    return {
-      ...sanitized,
-      hasCookie: Boolean(cookie && cookie.length > 20)
-    };
-  });
+  ensureConfigDir();
+  if (!fs.existsSync(ACCOUNTS_FILE)) return [];
+  try {
+    const raw = JSON.parse(fs.readFileSync(ACCOUNTS_FILE, 'utf8'));
+    return raw.map(acc => {
+      const { cookie, ...sanitized } = acc;
+      return {
+        ...sanitized,
+        hasCookie: Boolean(cookie && String(cookie).length > 5)
+      };
+    });
+  } catch (err) {
+    console.error('[Storage] Error getting sanitized accounts:', err);
+    return [];
+  }
 }
 
 /**
@@ -203,27 +210,45 @@ function getSanitizedAccounts() {
  */
 function getAccountCookie(accountId) {
   if (!accountId) return null;
-  const accounts = loadAccounts(false);
-  const acc = accounts.find(a => String(a.id) === String(accountId));
-  return acc ? (acc.cookie || null) : null;
+  ensureConfigDir();
+  if (!fs.existsSync(ACCOUNTS_FILE)) return null;
+  try {
+    const raw = JSON.parse(fs.readFileSync(ACCOUNTS_FILE, 'utf8'));
+    const acc = raw.find(a => String(a.id) === String(accountId));
+    if (!acc || !acc.cookie) return null;
+    return decrypt(acc.cookie) || null;
+  } catch (err) {
+    console.error('[Storage] Error retrieving account cookie:', err);
+    return null;
+  }
 }
 
 /**
- * Saves accounts, intelligently preserving existing cookies if sanitized accounts are passed.
+ * Saves accounts, intelligently preserving existing encrypted cookies from disk.
  */
 function saveAccounts(incomingAccounts) {
   ensureConfigDir();
   try {
-    const currentAccounts = loadAccounts(false);
-    const currentMap = new Map(currentAccounts.map(a => [String(a.id), a.cookie]));
+    let rawAccounts = [];
+    if (fs.existsSync(ACCOUNTS_FILE)) {
+      try {
+        rawAccounts = JSON.parse(fs.readFileSync(ACCOUNTS_FILE, 'utf8'));
+      } catch {
+        rawAccounts = [];
+      }
+    }
+    const rawMap = new Map(rawAccounts.map(a => [String(a.id), a]));
 
     const merged = incomingAccounts.map(acc => {
-      const existingCookie = currentMap.get(String(acc.id));
-      const cookieToSave = acc.cookie || existingCookie || '';
-      const { hasCookie, ...cleanAcc } = acc;
+      const existingRaw = rawMap.get(String(acc.id));
+      let cookieToKeep = existingRaw ? (existingRaw.cookie || '') : '';
+      if (acc.cookie && typeof acc.cookie === 'string' && acc.cookie.length > 20) {
+        cookieToKeep = encrypt(acc.cookie);
+      }
+      const { hasCookie, cookie, ...cleanAcc } = acc;
       return {
         ...cleanAcc,
-        cookie: encrypt(cookieToSave)
+        cookie: cookieToKeep
       };
     });
 
@@ -237,11 +262,19 @@ function saveAccounts(incomingAccounts) {
 
 /**
  * Adds or updates an account directly in storage with DPAPI encryption.
- * Returns the updated sanitized accounts list.
+ * Preserves all other accounts' existing encrypted cookies intact.
  */
 function addOrUpdateAccount(accountData, rawCookie) {
   ensureConfigDir();
-  const accounts = loadAccounts(false);
+  let accounts = [];
+  if (fs.existsSync(ACCOUNTS_FILE)) {
+    try {
+      accounts = JSON.parse(fs.readFileSync(ACCOUNTS_FILE, 'utf8'));
+    } catch {
+      accounts = [];
+    }
+  }
+
   const cleanCookie = rawCookie ? (rawCookie.trim().startsWith('.ROBLOSECURITY=') ? rawCookie.trim() : `.ROBLOSECURITY=${rawCookie.trim()}`) : '';
 
   const existingIdx = accounts.findIndex(a => 
@@ -249,28 +282,24 @@ function addOrUpdateAccount(accountData, rawCookie) {
     (accountData.id && String(a.id) === String(accountData.id))
   );
 
+  const encryptedCookie = cleanCookie ? encrypt(cleanCookie) : '';
+
+  const { hasCookie, cookie, ...cleanData } = accountData;
+
   if (existingIdx !== -1) {
     accounts[existingIdx] = {
       ...accounts[existingIdx],
-      ...accountData,
-      cookie: cleanCookie || accounts[existingIdx].cookie
+      ...cleanData,
+      cookie: encryptedCookie || accounts[existingIdx].cookie || ''
     };
   } else {
     accounts.push({
-      ...accountData,
-      cookie: cleanCookie
+      ...cleanData,
+      cookie: encryptedCookie
     });
   }
 
-  const payload = accounts.map(acc => {
-    const { hasCookie, ...cleanAcc } = acc;
-    return {
-      ...cleanAcc,
-      cookie: encrypt(cleanAcc.cookie)
-    };
-  });
-
-  fs.writeFileSync(ACCOUNTS_FILE, JSON.stringify(payload, null, 2), { encoding: 'utf8', mode: 0o600 });
+  fs.writeFileSync(ACCOUNTS_FILE, JSON.stringify(accounts, null, 2), { encoding: 'utf8', mode: 0o600 });
   return getSanitizedAccounts();
 }
 

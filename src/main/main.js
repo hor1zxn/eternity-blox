@@ -12,11 +12,27 @@ const {
   writeFpsCapToVersion
 } = require('./version-manager');
 const { launchRobloxInstance, launchMultipleInstances } = require('./roblox-launcher');
+const { AppUpdater } = require('./updater');
 
 // Ensure Windows Taskbar registers the unique AppUserModelID and icon
 app.setAppUserModelId('com.eternityblox.launcher');
 
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+  process.exit(0);
+}
+
 let mainWindow = null;
+let splashWindow = null;
+let appUpdater = null;
+
+app.on('second-instance', () => {
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+});
 
 // Track active instance sessions mapped to accounts & targets
 const runningInstances = new Map();
@@ -42,6 +58,40 @@ function broadcastInstances() {
   }
 }
 
+function createSplashWindow() {
+  const iconPath = path.join(__dirname, '..', '..', 'resources', 'icon.ico');
+  const appIcon = nativeImage.createFromPath(iconPath);
+
+  splashWindow = new BrowserWindow({
+    width: 480,
+    height: 290,
+    frame: false,
+    transparent: true,
+    resizable: false,
+    center: true,
+    show: true,
+    backgroundColor: '#00000000',
+    icon: appIcon,
+    skipTaskbar: false,
+    webPreferences: {
+      preload: path.join(__dirname, '..', 'preload', 'splash-preload.js'),
+      nodeIntegration: false,
+      contextIsolation: true,
+      sandbox: true
+    }
+  });
+
+  if (!appIcon.isEmpty()) {
+    splashWindow.setIcon(appIcon);
+  }
+
+  splashWindow.loadFile(path.join(__dirname, '..', 'renderer', 'splash.html'));
+
+  splashWindow.on('closed', () => {
+    splashWindow = null;
+  });
+}
+
 function createWindow() {
   const iconPath = path.join(__dirname, '..', '..', 'resources', 'icon.ico');
   const appIcon = nativeImage.createFromPath(iconPath);
@@ -52,6 +102,7 @@ function createWindow() {
     minWidth: 980,
     minHeight: 640,
     frame: false,
+    show: false,
     title: 'EternityBlox',
     backgroundColor: '#090a0f',
     icon: appIcon,
@@ -136,13 +187,63 @@ function createWindow() {
 }
 
 app.whenReady().then(async () => {
+  const isHeadlessTest = process.argv.includes('--smoke-test') ||
+    process.argv.includes('--screenshot-credits') ||
+    process.argv.includes('--screenshot-builds') ||
+    process.argv.includes('--screenshot-mixer');
+
+  if (!isHeadlessTest) {
+    createSplashWindow();
+  }
   createWindow();
+
+  appUpdater = new AppUpdater((status) => {
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      splashWindow.webContents.send('updater:status', status);
+    }
+  });
 
   // Start the native helper daemon to own singleton mutex
   try {
     nativeHelper.start();
   } catch (err) {
     console.error('Failed to start native helper:', err);
+  }
+
+  if (isHeadlessTest) {
+    mainWindow.show();
+  } else {
+    // Perform update check and wait for main window load in parallel
+    const updateCheckPromise = appUpdater.check();
+    const windowLoadedPromise = new Promise((resolve) => {
+      if (mainWindow.webContents.isLoading()) {
+        mainWindow.webContents.once('did-finish-load', resolve);
+      } else {
+        resolve();
+      }
+    });
+
+    const [updateResult] = await Promise.all([updateCheckPromise, windowLoadedPromise]);
+
+    // If update downloaded and app will restart, keep splash active
+    if (updateResult && updateResult.hasUpdate && updateResult.downloaded) {
+      return;
+    }
+
+    if (splashWindow && !splashWindow.isDestroyed()) {
+      splashWindow.webContents.send('splash:closing');
+    }
+
+    setTimeout(() => {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+      if (splashWindow && !splashWindow.isDestroyed()) {
+        splashWindow.close();
+        splashWindow = null;
+      }
+    }, 400);
   }
 
   // Broadcast events to renderer
@@ -273,6 +374,10 @@ ipcMain.handle('launcher:spawn', async (event, options) => {
   // Zero-Trust Security: Resolve account cookie directly in main Node process
   const secureCookie = options.cookie || (options.accountId ? storage.getAccountCookie(options.accountId) : null);
 
+  if (options.accountId && !secureCookie) {
+    throw new Error(`Authentication cookie for account "${options.username || options.displayName || 'Account'}" is missing or could not be decrypted. Please re-add or re-login this account.`);
+  }
+
   const res = await launchRobloxInstance({
     versionHash: activeVersion,
     cookie: secureCookie,
@@ -364,46 +469,24 @@ ipcMain.handle('native:get-status', async () => {
   };
 });
 
-ipcMain.handle('native:arrange-windows', (event, mode = 'grid') => {
-  const { exec } = require('child_process');
-  // Simple powershell window tile script
-  const psScript = `
-    Add-Type @"
-      using System;
-      using System.Runtime.InteropServices;
-      public class WinPos {
-        [DllImport("user32.dll")] public static extern bool MoveWindow(IntPtr hWnd, int X, int Y, int nWidth, int nHeight, bool bRepaint);
-        [DllImport("user32.dll")] public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-      }
-"@
-    $procs = Get-Process -Name "RobloxPlayerBeta" -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 }
-    $count = $procs.Count
-    if ($count -eq 0) { exit }
+ipcMain.handle('native:is-window-ready', async (event, pid) => {
+  return await nativeHelper.isWindowReady(pid);
+});
 
-    $screenW = [System.Windows.Forms.SystemInformation]::VirtualScreen.Width
-    $screenH = [System.Windows.Forms.SystemInformation]::VirtualScreen.Height
-    if ($screenW -eq 0) { $screenW = 1920; $screenH = 1080 }
+ipcMain.handle('native:close-singleton-handles', async () => {
+  return await nativeHelper.closeHandles();
+});
 
-    if ($count -eq 1) {
-      [WinPos]::MoveWindow($procs[0].MainWindowHandle, 50, 50, [int]($screenW * 0.7), [int]($screenH * 0.7), $true)
-    } elseif ($count -eq 2) {
-      $w = [int]($screenW / 2)
-      [WinPos]::MoveWindow($procs[0].MainWindowHandle, 0, 0, $w, $screenH, $true)
-      [WinPos]::MoveWindow($procs[1].MainWindowHandle, $w, 0, $w, $screenH, $true)
-    } else {
-      $cols = 2
-      $rows = [Math]::Ceiling($count / 2)
-      $w = [int]($screenW / $cols)
-      $h = [int]($screenH / $rows)
-      for ($i = 0; $i -lt $count; $i++) {
-        $c = $i % $cols
-        $r = [Math]::Floor($i / $cols)
-        [WinPos]::MoveWindow($procs[$i].MainWindowHandle, $c * $w, $r * $h, $w, $h, $true)
-      }
-    }
-  `;
-  exec(`powershell -Command "${psScript.replace(/\r?\n/g, ' ')}"`, () => {});
-  return true;
+ipcMain.handle('native:get-pids', async () => {
+  return await nativeHelper.getPids();
+});
+
+ipcMain.handle('native:arrange-windows', async (event, mode = 'grid') => {
+  return await nativeHelper.tile2x2();
+});
+
+ipcMain.handle('native:tile-2x2', async (event, pid, slot) => {
+  return await nativeHelper.tile2x2(pid, slot);
 });
 
 // Accounts IPC - Zero-Trust Cookie Model
@@ -703,4 +786,12 @@ ipcMain.handle('shell:open-external', (event, url) => {
   } catch (e) {
     console.warn('[Security] Invalid URL passed to shell:open-external:', url);
   }
+});
+
+// Updater Manual Check IPC
+ipcMain.handle('updater:check', async () => {
+  if (!appUpdater) {
+    appUpdater = new AppUpdater();
+  }
+  return await appUpdater.checkViaGitHubApi();
 });
