@@ -177,6 +177,16 @@ class NativeHelper extends EventEmitter {
     }
   }
 
+  async setInstanceVolume(pid, percent) {
+    try {
+      const res = await this.send('volume', String(Math.round(percent)), String(pid));
+      return res;
+    } catch (err) {
+      console.error('[NativeHelper] setInstanceVolume error:', err);
+      return false;
+    }
+  }
+
   async setAntiAfk(seconds = 1080) {
     try {
       return await this.send('antiafk', String(seconds), '0');

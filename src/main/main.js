@@ -346,6 +346,10 @@ ipcMain.handle('native:set-volume', async (event, percent) => {
   return await nativeHelper.setVolume(percent);
 });
 
+ipcMain.handle('native:set-instance-volume', async (event, pid, percent) => {
+  return await nativeHelper.setInstanceVolume(pid, percent);
+});
+
 ipcMain.handle('native:set-antiafk', async (event, seconds) => {
   return await nativeHelper.setAntiAfk(seconds);
 });

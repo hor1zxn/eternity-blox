@@ -34,6 +34,7 @@ contextBridge.exposeInMainWorld('api', {
 
   // Mixer & Native
   setVolume: (percent) => ipcRenderer.invoke('native:set-volume', percent),
+  setInstanceVolume: (pid, percent) => ipcRenderer.invoke('native:set-instance-volume', pid, percent),
   setAntiAfk: (seconds) => ipcRenderer.invoke('native:set-antiafk', seconds),
   getStatus: () => ipcRenderer.invoke('native:get-status'),
   arrangeWindows: (mode) => ipcRenderer.invoke('native:arrange-windows', mode),

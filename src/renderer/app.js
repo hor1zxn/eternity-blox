@@ -391,6 +391,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnArrangeGrid = document.getElementById('btn-arrange-grid');
   const btnArrangeSplit = document.getElementById('btn-arrange-split');
   const pidsTableBody = document.getElementById('pids-table-body');
+  const instanceMixerList = document.getElementById('instance-mixer-list');
+  const mixerActiveChannelsBadge = document.getElementById('mixer-active-channels-badge');
   const fpsButtons = document.querySelectorAll('.fps-btn');
 
   // Settings Elements
@@ -1405,6 +1407,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderAccounts();
     renderActiveProcessesTable();
     updateCockpitInstanceChips();
+    renderInstanceMixer();
     if (accountSelectModal?.classList.contains('active')) {
       renderAccountSelectList();
     }
@@ -1479,6 +1482,111 @@ document.addEventListener('DOMContentLoaded', async () => {
       `;
     }).join('');
   }
+
+  function renderInstanceMixer() {
+    if (!instanceMixerList) return;
+    state.instanceVolumes = state.instanceVolumes || {};
+
+    const allPids = Array.from(new Set([
+      ...(state.runningPids || []),
+      ...(state.instances || []).map(i => i.pid)
+    ])).filter(p => p > 0);
+
+    if (mixerActiveChannelsBadge) {
+      mixerActiveChannelsBadge.textContent = `${allPids.length} Active ${allPids.length === 1 ? 'Channel' : 'Channels'}`;
+      if (allPids.length > 0) {
+        mixerActiveChannelsBadge.className = 'badge b-white';
+        mixerActiveChannelsBadge.style.color = 'var(--green)';
+        mixerActiveChannelsBadge.style.borderColor = 'rgba(34, 197, 94, 0.3)';
+      } else {
+        mixerActiveChannelsBadge.className = 'badge b-dark';
+        mixerActiveChannelsBadge.style.color = '';
+        mixerActiveChannelsBadge.style.borderColor = '';
+      }
+    }
+
+    if (allPids.length === 0) {
+      instanceMixerList.innerHTML = `
+        <div class="instance-mixer-empty">
+          <span class="material-icons-round">graphic_eq</span>
+          <span>No active Roblox instances running. Launch accounts or builds to mix individual volume levels.</span>
+        </div>
+      `;
+      return;
+    }
+
+    instanceMixerList.innerHTML = allPids.map(pid => {
+      const inst = (state.instances || []).find(i => i.pid === pid) || {};
+      const avatarSrc = inst.avatarUrl || 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="%2352525b"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>';
+      const displayName = inst.displayName || inst.username || `Roblox Client (${pid})`;
+      const usernameDisp = inst.username ? `@${inst.username}` : `PID ${pid}`;
+      const vol = state.instanceVolumes[pid] !== undefined ? state.instanceVolumes[pid] : 100;
+      const isMuted = vol === 0;
+
+      return `
+        <div class="instance-mixer-row" data-pid="${pid}">
+          <div class="instance-mixer-info">
+            <img src="${avatarSrc}" alt="" class="instance-mixer-pfp">
+            <div class="instance-mixer-names">
+              <div class="instance-mixer-name">${displayName}</div>
+              <div class="instance-mixer-sub">
+                <span>${usernameDisp}</span>
+                <span class="badge b-dark" style="font-size: 9px; padding: 0 4px;">PID ${pid}</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="instance-mixer-controls">
+            <button class="instance-mixer-mute-btn ${isMuted ? 'muted' : ''}" onclick="window.toggleInstanceMute(${pid})" title="${isMuted ? 'Unmute' : 'Mute'}">
+              <span class="material-icons-round">${isMuted ? 'volume_off' : (vol > 50 ? 'volume_up' : (vol > 0 ? 'volume_down' : 'volume_mute'))}</span>
+            </button>
+            <div class="slider-wrap" style="flex: 1; max-width: 260px;">
+              <input type="range" class="range-slider instance-vol-slider" min="0" max="100" value="${vol}" oninput="window.handleInstanceVolumeChange(${pid}, this.value)">
+              <span class="slider-val instance-vol-val">${vol}%</span>
+            </div>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  window.handleInstanceVolumeChange = async (pid, val) => {
+    const num = Number(val);
+    state.instanceVolumes = state.instanceVolumes || {};
+    state.instanceVolumes[pid] = num;
+    const row = document.querySelector(`.instance-mixer-row[data-pid="${pid}"]`);
+    if (row) {
+      const valLabel = row.querySelector('.instance-vol-val');
+      if (valLabel) valLabel.textContent = `${num}%`;
+      const muteBtn = row.querySelector('.instance-mixer-mute-btn');
+      if (muteBtn) {
+        if (num === 0) {
+          muteBtn.classList.add('muted');
+          muteBtn.querySelector('.material-icons-round').textContent = 'volume_off';
+        } else {
+          muteBtn.classList.remove('muted');
+          muteBtn.querySelector('.material-icons-round').textContent = num > 50 ? 'volume_up' : 'volume_down';
+        }
+      }
+    }
+    await window.api.setInstanceVolume(pid, num);
+  };
+
+  window.toggleInstanceMute = async (pid) => {
+    state.instanceVolumes = state.instanceVolumes || {};
+    const current = state.instanceVolumes[pid] !== undefined ? state.instanceVolumes[pid] : 100;
+    const newVol = current > 0 ? 0 : (state.instanceLastVolumes?.[pid] || 100);
+    if (current > 0) {
+      state.instanceLastVolumes = state.instanceLastVolumes || {};
+      state.instanceLastVolumes[pid] = current;
+    }
+    await window.handleInstanceVolumeChange(pid, newVol);
+    const row = document.querySelector(`.instance-mixer-row[data-pid="${pid}"]`);
+    if (row) {
+      const slider = row.querySelector('.instance-vol-slider');
+      if (slider) slider.value = newVol;
+    }
+  };
 
   window.killSpecificPid = async (pid) => {
     state.instances = (state.instances || []).filter(i => i.pid !== pid);

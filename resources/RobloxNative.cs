@@ -161,13 +161,24 @@ internal static class RobloxNative
         float level = pct / 100.0f;
 
         int[] pids;
-        try
+        if (args.Length > 2)
         {
-            var procs = Process.GetProcessesByName("RobloxPlayerBeta");
-            pids = new int[procs.Length];
-            for (int i = 0; i < procs.Length; i++) pids[i] = procs[i].Id;
+            int targetPid;
+            if (int.TryParse(args[2], out targetPid) && targetPid > 0)
+                pids = new int[] { targetPid };
+            else
+                pids = RobloxPids();
         }
-        catch { pids = new int[0]; }
+        else
+        {
+            try
+            {
+                var procs = Process.GetProcessesByName("RobloxPlayerBeta");
+                pids = new int[procs.Length];
+                for (int i = 0; i < procs.Length; i++) pids[i] = procs[i].Id;
+            }
+            catch { pids = new int[0]; }
+        }
 
         if (pids.Length == 0) { Console.Out.WriteLine("SET:0"); Console.Out.Flush(); return 0; }
 
@@ -1043,7 +1054,19 @@ internal static class Daemon
                     if (p.Length > 2) int.TryParse(p[2], out pct);
                     if (pct < 0) pct = 0;
                     if (pct > 100) pct = 100;
-                    int[] pids = RobloxNative.RobloxPids();
+                    int[] pids;
+                    if (p.Length > 3)
+                    {
+                        int targetPid;
+                        if (int.TryParse(p[3], out targetPid) && targetPid > 0)
+                            pids = new int[] { targetPid };
+                        else
+                            pids = RobloxNative.RobloxPids();
+                    }
+                    else
+                    {
+                        pids = RobloxNative.RobloxPids();
+                    }
                     int n = pids.Length == 0 ? 0 : AudioControl.Apply(pct / 100.0f, pids);
                     Reply(id, n.ToString());
                     break;
