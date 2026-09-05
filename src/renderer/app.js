@@ -4,7 +4,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const state = {
     settings: {},
     installedVersions: [],
-    catalog: [],
     accounts: [],
     runningPids: [],
     instances: [],
@@ -87,8 +86,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   const btnInstallCustom = document.getElementById('btn-install-custom');
   const installedVersionsContainer = document.getElementById('installed-versions-container');
   const btnRefreshInstalled = document.getElementById('btn-refresh-installed');
-  const catalogSearch = document.getElementById('catalog-search');
-  const catalogTableBody = document.getElementById('catalog-table-body');
 
   // Modals
   const downloadModal = document.getElementById('download-modal');
@@ -181,7 +178,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (initialInstances) updateInstancesUI(initialInstances);
       } catch {}
 
-      loadVersionCatalog(); // background fetch
       updateActiveVersionDisplay();
     } catch (err) {
       log(`Initialization error: ${err.message}`, 'err');
@@ -216,7 +212,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   function renderInstalledVersions() {
     if (!installedVersionsContainer) return;
     if (state.installedVersions.length === 0) {
-      installedVersionsContainer.innerHTML = '<div style="color:var(--t3); padding:24px; text-align:center; font-size:12.5px; grid-column:1/-1;">No Roblox builds found on disk. Download one with 1-Click Downgrade or install a version from the catalog!</div>';
+      installedVersionsContainer.innerHTML = '<div style="color:var(--t3); padding:24px; text-align:center; font-size:12.5px; grid-column:1/-1;">No Roblox builds found on disk. Paste a version hash above to install!</div>';
       return;
     }
 
@@ -316,56 +312,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // Version Catalog Browser
-  async function loadVersionCatalog() {
-    try {
-      const catalog = await window.api.fetchVersionCatalog();
-      state.catalog = catalog;
-      renderCatalogTable(catalog);
-    } catch (err) {
-      log(`Catalog load warning: ${err.message}`, 'err');
-    }
-  }
-
-  function renderCatalogTable(list) {
-    if (!catalogTableBody) return;
-    if (!list || list.length === 0) {
-      catalogTableBody.innerHTML = '<tr><td colspan="4" style="text-align: center; padding: 20px; color: var(--t3);">Catalog loading...</td></tr>';
-      return;
-    }
-
-    const installedSet = new Set(state.installedVersions.map(v => v.hash));
-    const query = (catalogSearch?.value || '').trim().toLowerCase();
-    const filtered = list.filter(item => {
-      if (!query) return true;
-      return item.versionString.toLowerCase().includes(query) || item.hash.toLowerCase().includes(query);
-    }).slice(0, 35);
-
-    catalogTableBody.innerHTML = filtered.map(item => {
-      const isInstalled = installedSet.has(item.hash);
-      const isActive = item.hash === state.activeVersion;
-      return `
-        <tr>
-          <td><strong style="color:#fff; font-family:'JetBrains Mono',monospace;">${item.versionString}</strong></td>
-          <td class="table-hash">${item.hash}</td>
-          <td>
-            ${isInstalled
-              ? `<span class="badge b-white">${isActive ? 'ACTIVE' : 'INSTALLED'}</span>`
-              : `<span class="badge b-dark">REMOTE CDN</span>`}
-          </td>
-          <td style="text-align: right;">
-            ${isInstalled
-              ? `<button class="btn btn-ghost btn-sm" onclick="window.launchSpecificVersion('${item.hash}')">Launch</button>`
-              : `<button class="btn btn-primary btn-sm" onclick="window.downloadBuild('${item.hash}')">Download & Use</button>`}
-          </td>
-        </tr>
-      `;
-    }).join('');
-  }
-
-  catalogSearch?.addEventListener('input', () => {
-    renderCatalogTable(state.catalog);
-  });
 
   // Download Build Engine
   window.downloadBuild = async (hash) => {
@@ -418,7 +364,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (!targetHash) {
       log('No Roblox build selected. Please install or select a build below.', 'err');
-      alert('No active Roblox build selected. Please install or choose a version from the installed list or catalog below.');
+      alert('No active Roblox build selected. Please install or choose a version from the installed list below.');
       return;
     }
 
