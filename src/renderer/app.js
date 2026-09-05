@@ -11,6 +11,110 @@ document.addEventListener('DOMContentLoaded', async () => {
     activeVersion: ''
   };
 
+  // Tactile UI Audio Feedback Engine (Web Audio API)
+  let uiAudioCtx = null;
+
+  function getAudioCtx() {
+    if (!uiAudioCtx) {
+      const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+      if (AudioContextClass) {
+        uiAudioCtx = new AudioContextClass();
+      }
+    }
+    if (uiAudioCtx && uiAudioCtx.state === 'suspended') {
+      uiAudioCtx.resume();
+    }
+    return uiAudioCtx;
+  }
+
+  function playUiSound(type = 'button') {
+    try {
+      const ctx = getAudioCtx();
+      if (!ctx) return;
+
+      const now = ctx.currentTime;
+
+      if (type === 'tab') {
+        // Smooth, warm acoustic tab transition pop
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        const filter = ctx.createBiquadFilter();
+
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(1400, now);
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(440, now);
+        osc.frequency.exponentialRampToValueAtTime(180, now + 0.035);
+
+        gain.gain.setValueAtTime(0.09, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.038);
+      } else if (type === 'action' || type === 'launch') {
+        // Punchy, crisp metallic action snap for launch & terminate
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(920, now);
+        osc.frequency.exponentialRampToValueAtTime(110, now + 0.03);
+
+        gain.gain.setValueAtTime(0.12, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.035);
+      } else {
+        // Tactile micro-switch click for standard buttons & controls
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(1050, now);
+        osc.frequency.exponentialRampToValueAtTime(260, now + 0.022);
+
+        gain.gain.setValueAtTime(0.085, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.022);
+
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+
+        osc.start(now);
+        osc.stop(now + 0.025);
+      }
+    } catch {
+      // Audio errors fail silently without interrupting UI
+    }
+  }
+
+  window.playUiSound = playUiSound;
+
+  // Global Delegated Click Listener for All Buttons, Tabs, Nav Items & Controls
+  document.addEventListener('click', (e) => {
+    const target = e.target;
+    if (!target) return;
+
+    const clickable = target.closest('button, .btn, .nav-item, .deck-tab, .tab-btn, .account-select-item, .chip-kill, .btn-acc-tool, .btn-acc-action, .tb-btn, .dialog-btn, input[type="checkbox"]');
+    if (!clickable) return;
+
+    if (clickable.classList.contains('nav-item') || clickable.classList.contains('deck-tab') || clickable.classList.contains('tab-btn')) {
+      playUiSound('tab');
+    } else if (clickable.id === 'btn-cockpit-launch' || clickable.id === 'btn-quick-launch' || clickable.classList.contains('btn-acc-action') || clickable.classList.contains('danger') || clickable.classList.contains('btn-danger')) {
+      playUiSound('action');
+    } else {
+      playUiSound('button');
+    }
+  }, true);
+
   // Window Controls
   const btnMinimize = document.getElementById('btn-minimize');
   const btnMaximize = document.getElementById('btn-maximize');
