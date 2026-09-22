@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('api', {
   cancelInstall: () => ipcRenderer.invoke('versions:cancel-install'),
   deleteVersion: (versionHash) => ipcRenderer.invoke('versions:delete', versionHash),
   applyFpsCap: (payload) => ipcRenderer.invoke('versions:apply-fps-cap', payload),
+  immunizeVersion: (versionHash) => ipcRenderer.invoke('versions:immunize', versionHash),
   onInstallProgress: (cb) => {
     const listener = (event, progress) => cb(progress);
     ipcRenderer.on('install-progress', listener);

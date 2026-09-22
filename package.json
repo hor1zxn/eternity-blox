@@ -1,14 +1,16 @@
 {
   "name": "eternityblox",
   "productName": "EternityBlox",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "EternityBlox - Roblox Version Downgrader, Version Selector & Multi-Instance Manager",
   "main": "src/main/main.js",
   "author": "EternityBlox",
   "license": "MIT",
   "scripts": {
     "start": "electron .",
-    "compile-native": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe /nologo /optimize+ /platform:x64 /target:exe /r:System.Drawing.dll /r:System.Windows.Forms.dll /out:resources\\RobloxNative.exe resources\\RobloxNative.cs",
+    "compile-native": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe /nologo /optimize+ /platform:x64 /target:exe /win32icon:resources\\icon.ico /r:System.Drawing.dll /r:System.Windows.Forms.dll /out:resources\\RobloxNative.exe resources\\RobloxNative.cs",
+    "compile-blocker": "C:\\Windows\\Microsoft.NET\\Framework64\\v4.0.30319\\csc.exe /nologo /optimize+ /platform:anycpu /target:winexe /out:resources\\update-blocker.exe resources\\update-blocker.cs",
+    "predist": "npm run compile-native && npm run compile-blocker",
     "pack": "electron-builder --dir",
     "dist": "electron-builder -w nsis",
     "dist:portable": "electron-builder -w portable"
@@ -46,10 +48,12 @@
     "asar": true,
     "asarUnpack": [
       "resources/RobloxNative.exe",
+      "resources/update-blocker.exe",
       "resources/arrange-windows.ps1"
     ],
     "extraResources": [
       "resources/RobloxNative.exe",
+      "resources/update-blocker.exe",
       "resources/icon.ico",
       "resources/arrange-windows.ps1"
     ],

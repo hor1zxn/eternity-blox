@@ -149,6 +149,14 @@ async function downloadAndInstallVersion(rawHash, onProgress) {
     // Write AppSettings.xml
     fs.writeFileSync(path.join(destDir, 'AppSettings.xml'), APP_SETTINGS, 'utf8');
 
+    // Immunize newly installed version immediately against auto-updates
+    try {
+      const { immunizeVersion } = require('./version-manager');
+      immunizeVersion(destDir);
+    } catch (imErr) {
+      console.warn('[Downloader] Immunization warning:', imErr.message);
+    }
+
     if (!fs.existsSync(exePath)) {
       throw new Error('Installation completed, but RobloxPlayerBeta.exe was not found.');
     }

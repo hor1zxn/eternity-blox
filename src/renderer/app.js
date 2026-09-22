@@ -546,6 +546,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <span class="ver-meta-item"><span class="material-icons-round">schedule</span>${v.dateStr || 'Installed'}</span>
                 <span class="ver-meta-dot">•</span>
                 <span class="ver-meta-item"><span class="material-icons-round">storage</span>${sizeMB} MB</span>
+                ${v.isImmunized ? `
+                  <span class="ver-meta-dot">•</span>
+                  <span class="ver-meta-item text-success" style="color: #10b981;" title="Roblox auto-update thread neutralized on this build">
+                    <span class="material-icons-round" style="font-size: 13px; margin-right: 2px;">shield</span>Updates Blocked
+                  </span>
+                ` : ''}
               </div>
             </div>
             <div class="ver-card-status">

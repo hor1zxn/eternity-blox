@@ -1,6 +1,7 @@
 const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
+const nativeHelper = require('./native-helper');
 const { getRobloxVersionsDir, normalizeHash } = require('./rdd-downloader');
 
 const CLIENT_SETTINGS_URL = 'https://clientsettings.roblox.com/v2/client-version/WindowsPlayer';
@@ -10,6 +11,83 @@ const HISTORY_URL = 'https://raw.githubusercontent.com/MaximumADHD/Roblox-Client
 
 let cachedCatalog = null;
 let lastCatalogFetch = 0;
+
+function cleanStaleTempUpdaters() {
+  try {
+    const tempDir = path.join(process.env.LOCALAPPDATA || '', 'Temp', 'Roblox');
+    const tempInstaller = path.join(tempDir, 'RobloxPlayerInstaller.exe');
+    if (fs.existsSync(tempInstaller)) {
+      fs.unlinkSync(tempInstaller);
+    }
+  } catch {}
+  try {
+    const localInstallerDir = path.join(process.env.LOCALAPPDATA || '', 'Roblox', 'RobloxPlayerInstaller');
+    if (fs.existsSync(localInstallerDir)) {
+      fs.rmSync(localInstallerDir, { recursive: true, force: true });
+    }
+  } catch {}
+}
+
+function immunizeVersion(versionDirOrHash) {
+  if (!versionDirOrHash) return false;
+  let targetDir = versionDirOrHash;
+  if (!path.isAbsolute(targetDir)) {
+    const norm = normalizeHash(targetDir);
+    if (!norm) return false;
+    targetDir = path.join(getRobloxVersionsDir(), norm);
+  }
+  if (!fs.existsSync(targetDir)) return false;
+
+  const stubExe = nativeHelper.resolveUpdateBlockerPath();
+  const installerPath = path.join(targetDir, 'RobloxPlayerInstaller.exe');
+  const originalBackup = path.join(targetDir, 'RobloxPlayerInstaller.exe.original');
+
+  let immunizedInstaller = false;
+  try {
+    if (stubExe && fs.existsSync(stubExe)) {
+      if (fs.existsSync(installerPath)) {
+        const stat = fs.statSync(installerPath);
+        // Real installer is > 1MB, stub is ~4.5KB
+        if (stat.size > 20000) {
+          if (!fs.existsSync(originalBackup)) {
+            try { fs.copyFileSync(installerPath, originalBackup); } catch {}
+          }
+          fs.copyFileSync(stubExe, installerPath);
+          immunizedInstaller = true;
+          console.log(`[VersionManager] Immunized: replaced RobloxPlayerInstaller.exe with stub in ${targetDir}`);
+        } else {
+          immunizedInstaller = true;
+        }
+      } else {
+        fs.copyFileSync(stubExe, installerPath);
+        immunizedInstaller = true;
+        console.log(`[VersionManager] Immunized: placed update blocker stub at ${installerPath}`);
+      }
+    }
+  } catch (err) {
+    console.warn(`[VersionManager] Could not update installer stub at ${targetDir}:`, err.message);
+  }
+
+  // Inject FFlags to disable update checks in ClientAppSettings.json
+  try {
+    const settingsDir = path.join(targetDir, 'ClientSettings');
+    const settingsFile = path.join(settingsDir, 'ClientAppSettings.json');
+    fs.mkdirSync(settingsDir, { recursive: true });
+    let current = {};
+    if (fs.existsSync(settingsFile)) {
+      try {
+        current = JSON.parse(fs.readFileSync(settingsFile, 'utf8'));
+      } catch {}
+    }
+    current.FFlagDebugEnableLocalAppUpdateChecks = false;
+    fs.writeFileSync(settingsFile, JSON.stringify(current, null, 2), 'utf8');
+  } catch (err) {
+    console.warn(`[VersionManager] Could not write ClientAppSettings for ${targetDir}:`, err.message);
+  }
+
+  cleanStaleTempUpdaters();
+  return immunizedInstaller;
+}
 
 function listInstalledVersions() {
   const base = getRobloxVersionsDir();
@@ -29,11 +107,13 @@ function listInstalledVersions() {
       if (!fs.existsSync(exePath)) continue;
 
       try {
+        const isImmunized = immunizeVersion(fullPath);
         const stat = fs.statSync(exePath);
         versions.push({
           hash: name,
           path: fullPath,
           exePath,
+          isImmunized,
           installedAt: stat.mtimeMs,
           sizeBytes: stat.size,
           dateStr: new Date(stat.mtimeMs).toLocaleDateString() + ' ' + new Date(stat.mtimeMs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
@@ -167,5 +247,7 @@ module.exports = {
   fetchLiveVersions,
   fetchVersionCatalog,
   deleteInstalledVersion,
-  writeFpsCapToVersion
+  writeFpsCapToVersion,
+  immunizeVersion,
+  cleanStaleTempUpdaters
 };

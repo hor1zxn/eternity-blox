@@ -247,6 +247,14 @@ async function launchRobloxInstance({ versionHash = null, cookie = null, target 
   const { exePath, version } = resolved;
   console.log(`[Launcher] Launching Roblox (${version}) at ${exePath}`);
 
+  // Ensure version directory is immunized against auto-updates before spawning
+  try {
+    const { immunizeVersion } = require('./version-manager');
+    immunizeVersion(path.dirname(exePath));
+  } catch (imErr) {
+    console.warn('[Launcher] Immunization pre-launch check warning:', imErr.message);
+  }
+
   let ticket = null;
   if (cookie) {
     ticket = await getAuthTicket(cookie);

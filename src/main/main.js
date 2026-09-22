@@ -9,7 +9,8 @@ const {
   fetchLiveVersions,
   fetchVersionCatalog,
   deleteInstalledVersion,
-  writeFpsCapToVersion
+  writeFpsCapToVersion,
+  immunizeVersion
 } = require('./version-manager');
 const { launchRobloxInstance, launchMultipleInstances } = require('./roblox-launcher');
 const { AppUpdater } = require('./updater');
@@ -326,6 +327,10 @@ ipcMain.handle('versions:delete', (event, versionHash) => {
 ipcMain.handle('versions:apply-fps-cap', (event, { versionHash, fpsCap }) => {
   storage.updateSettings({ fpsCap });
   return writeFpsCapToVersion(versionHash, fpsCap);
+});
+
+ipcMain.handle('versions:immunize', (event, versionHash) => {
+  return immunizeVersion(versionHash);
 });
 
 // Launch IPC

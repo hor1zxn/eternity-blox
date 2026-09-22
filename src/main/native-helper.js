@@ -41,9 +41,39 @@ class NativeHelper extends EventEmitter {
         const resCandidate = path.join(process.resourcesPath, 'resources', 'RobloxNative.exe');
         if (fs.existsSync(resCandidate)) return resCandidate;
       }
+      return null;
     }
 
-    return devPath;
+    if (fs.existsSync(devPath)) return devPath;
+    return null;
+  }
+
+  resolveUpdateBlockerPath() {
+    const isPackaged = (app && app.isPackaged) || (__dirname.includes('app.asar'));
+    if (isPackaged && process.resourcesPath) {
+      const packagedCandidates = [
+        path.join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'update-blocker.exe'),
+        path.join(process.resourcesPath, 'resources', 'update-blocker.exe'),
+        path.join(process.resourcesPath, 'update-blocker.exe')
+      ];
+      for (const p of packagedCandidates) {
+        if (fs.existsSync(p)) return p;
+      }
+    }
+
+    const devPath = path.join(__dirname, '..', '..', 'resources', 'update-blocker.exe');
+    if (devPath.includes('app.asar') && !devPath.includes('app.asar.unpacked')) {
+      const unpacked = devPath.replace('app.asar', 'app.asar.unpacked');
+      if (fs.existsSync(unpacked)) return unpacked;
+      if (process.resourcesPath) {
+        const resCandidate = path.join(process.resourcesPath, 'resources', 'update-blocker.exe');
+        if (fs.existsSync(resCandidate)) return resCandidate;
+      }
+      return null;
+    }
+
+    if (fs.existsSync(devPath)) return devPath;
+    return null;
   }
 
   resolvePsScriptPath() {
@@ -69,7 +99,15 @@ class NativeHelper extends EventEmitter {
 
   ensureExecutable() {
     this.exePath = this.resolveExecutablePath();
-    if (fs.existsSync(this.exePath)) return true;
+    if (this.exePath && fs.existsSync(this.exePath)) return true;
+
+    // In packaged app, runtime compilation from asar is impossible and disallowed
+    const isPackaged = (app && app.isPackaged) || (__dirname.includes('app.asar'));
+    if (isPackaged) {
+      console.warn('[NativeHelper] Packaged binary not found at candidates. Cannot compile at runtime.');
+      return false;
+    }
+
     const sysRoot = process.env.SystemRoot || process.env.windir || 'C:\\Windows';
     const cscCandidates = [
       path.join(sysRoot, 'Microsoft.NET', 'Framework64', 'v4.0.30319', 'csc.exe'),
@@ -77,15 +115,27 @@ class NativeHelper extends EventEmitter {
     ];
     const cscPath = cscCandidates.find(p => fs.existsSync(p));
     if (!cscPath) {
-      throw new Error('Microsoft .NET Framework 4.0 C# compiler (csc.exe) not found on system.');
+      console.warn('[NativeHelper] .NET C# compiler (csc.exe) not found on system.');
+      return false;
     }
     if (!fs.existsSync(this.csPath)) {
-      throw new Error(`Native source not found at ${this.csPath}`);
+      console.warn(`[NativeHelper] Native source not found at ${this.csPath}`);
+      return false;
     }
-    console.log('[NativeHelper] Compiling RobloxNative.exe...');
-    const cmd = `"${cscPath}" /nologo /optimize+ /platform:x64 /target:exe /r:System.Drawing.dll /r:System.Windows.Forms.dll /out:"${this.exePath}" "${this.csPath}"`;
-    execSync(cmd, { stdio: 'pipe' });
-    return fs.existsSync(this.exePath);
+
+    try {
+      const targetExe = this.exePath || path.join(__dirname, '..', '..', 'resources', 'RobloxNative.exe');
+      const iconPath = path.join(__dirname, '..', '..', 'resources', 'icon.ico');
+      const iconFlag = fs.existsSync(iconPath) ? `/win32icon:"${iconPath}"` : '';
+      console.log('[NativeHelper] Compiling RobloxNative.exe with Assembly metadata & icon...');
+      const cmd = `"${cscPath}" /nologo /optimize+ /platform:x64 /target:exe ${iconFlag} /r:System.Drawing.dll /r:System.Windows.Forms.dll /out:"${targetExe}" "${this.csPath}"`;
+      execSync(cmd, { stdio: 'pipe' });
+      this.exePath = targetExe;
+      return fs.existsSync(this.exePath);
+    } catch (compileErr) {
+      console.error('[NativeHelper] Compilation error:', compileErr.message);
+      return false;
+    }
   }
 
   sweepStrayHelpers() {
@@ -96,7 +146,18 @@ class NativeHelper extends EventEmitter {
 
   start() {
     if (this.child || this.isShuttingDown) return;
-    this.ensureExecutable();
+
+    try {
+      const available = this.ensureExecutable();
+      if (!available || !this.exePath || !fs.existsSync(this.exePath)) {
+        console.warn('[NativeHelper] RobloxNative.exe is unavailable. Native daemon will not be started.');
+        this.emit('mutex-status', false);
+        return;
+      }
+    } catch (prepErr) {
+      console.warn('[NativeHelper] ensureExecutable threw an exception:', prepErr.message);
+      return;
+    }
 
     const now = Date.now();
     if (now - this.lastStartTime < 4000) {
@@ -115,10 +176,28 @@ class NativeHelper extends EventEmitter {
       this.sweepStrayHelpers();
     }
 
-    console.log('[NativeHelper] Spawning RobloxNative.exe daemon...');
-    this.child = spawn(this.exePath, ['daemon'], {
-      stdio: ['pipe', 'pipe', 'pipe'],
-      windowsHide: true
+    console.log('[NativeHelper] Spawning RobloxNative.exe daemon at:', this.exePath);
+    try {
+      this.child = spawn(this.exePath, ['daemon'], {
+        stdio: ['pipe', 'pipe', 'pipe'],
+        windowsHide: true
+      });
+    } catch (spawnErr) {
+      console.error('[NativeHelper] Direct spawn error:', spawnErr.message);
+      this.child = null;
+      return;
+    }
+
+    // Critical: catch asynchronous ENOENT or launch failures on the child process
+    this.child.on('error', (err) => {
+      console.error('[NativeHelper] Child process error event:', err.message);
+      this.child = null;
+      this.mutexHeld = false;
+      this.emit('mutex-status', false);
+      for (const [id, req] of this.pendingRequests) {
+        req.reject(new Error(`Native helper unavailable: ${err.message}`));
+      }
+      this.pendingRequests.clear();
     });
 
     const rl = readline.createInterface({ input: this.child.stdout });

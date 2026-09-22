@@ -67,9 +67,18 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows.Forms;
+
+[assembly: AssemblyTitle("EternityBlox Native Helper")]
+[assembly: AssemblyDescription("Background helper daemon for EternityBlox")]
+[assembly: AssemblyCompany("EternityBlox")]
+[assembly: AssemblyProduct("EternityBlox")]
+[assembly: AssemblyCopyright("Copyright © 2026 EternityBlox")]
+[assembly: AssemblyVersion("1.0.0.0")]
+[assembly: AssemblyFileVersion("1.0.0.0")]
 
 internal static class RobloxNative
 {
