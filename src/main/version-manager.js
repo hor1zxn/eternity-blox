@@ -89,6 +89,30 @@ function immunizeVersion(versionDirOrHash) {
   return immunizedInstaller;
 }
 
+// Roblox's UpdateController can find and execute RobloxPlayerInstaller.exe from ANY
+// version-* directory on the system, not just the one being launched. We must replace
+// the installer stub in every single version directory to fully block auto-updates.
+function immunizeAllVersions() {
+  const base = getRobloxVersionsDir();
+  if (!fs.existsSync(base)) return 0;
+  let count = 0;
+  try {
+    const entries = fs.readdirSync(base, { withFileTypes: true });
+    for (const entry of entries) {
+      if (!entry.isDirectory()) continue;
+      if (!entry.name.toLowerCase().startsWith('version-')) continue;
+      const fullPath = path.join(base, entry.name);
+      try {
+        if (immunizeVersion(fullPath)) count++;
+      } catch {}
+    }
+  } catch (err) {
+    console.warn('[VersionManager] immunizeAllVersions error:', err.message);
+  }
+  if (count > 0) console.log(`[VersionManager] Immunized ${count} version directories`);
+  return count;
+}
+
 function listInstalledVersions() {
   const base = getRobloxVersionsDir();
   if (!fs.existsSync(base)) return [];
@@ -249,5 +273,6 @@ module.exports = {
   deleteInstalledVersion,
   writeFpsCapToVersion,
   immunizeVersion,
+  immunizeAllVersions,
   cleanStaleTempUpdaters
 };

@@ -1,7 +1,7 @@
 {
   "name": "eternityblox",
   "productName": "EternityBlox",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "EternityBlox - Roblox Version Downgrader, Version Selector & Multi-Instance Manager",
   "main": "src/main/main.js",
   "author": "EternityBlox",

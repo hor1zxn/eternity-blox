@@ -247,10 +247,12 @@ async function launchRobloxInstance({ versionHash = null, cookie = null, target 
   const { exePath, version } = resolved;
   console.log(`[Launcher] Launching Roblox (${version}) at ${exePath}`);
 
-  // Ensure version directory is immunized against auto-updates before spawning
+  // Ensure ALL version directories are immunized against auto-updates before spawning.
+  // Roblox's UpdateController can find and run RobloxPlayerInstaller.exe from ANY
+  // version-* directory, not just the one being launched.
   try {
-    const { immunizeVersion } = require('./version-manager');
-    immunizeVersion(path.dirname(exePath));
+    const { immunizeAllVersions } = require('./version-manager');
+    immunizeAllVersions();
   } catch (imErr) {
     console.warn('[Launcher] Immunization pre-launch check warning:', imErr.message);
   }

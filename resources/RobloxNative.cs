@@ -116,7 +116,6 @@ internal static class RobloxNative
     // objects are rooted in static fields so GC can't finalize them and silently
     // drop the hold.
     private static Mutex _singletonMutex;
-    private static Mutex _singletonEventMutex;
 
     private static int RunMutex()
     {
@@ -134,17 +133,12 @@ internal static class RobloxNative
         Console.Out.WriteLine("MUTEX_HELD");
         Console.Out.Flush();
 
-        // Step 3: slow part -- close existing event handles, then hold that name.
+        // Step 3: close existing ROBLOX_singletonEvent handles in running Roblox processes.
+        // IMPORTANT: We must NOT create a Mutex named "ROBLOX_singletonEvent" because
+        // Roblox uses Win32 CreateEventW for that name. Creating a Mutex with the same
+        // name causes an object type collision and breaks Roblox's OpenEventW calls.
         try { HandleCloser.CloseRobloxSingletonHandles(); }
         catch (Exception ex) { Console.Error.WriteLine("CloseHandles(mutex): " + ex.Message); }
-
-        try
-        {
-            bool created;
-            _singletonEventMutex = new Mutex(true, "ROBLOX_singletonEvent", out created);
-            if (!created) { try { _singletonEventMutex.WaitOne(0); } catch (AbandonedMutexException) { } catch { } }
-        }
-        catch (Exception ex) { Console.Error.WriteLine("HoldEventMutex: " + ex.Message); }
 
         // Keep alive (and keep the owning thread + static refs alive) forever.
         Thread.Sleep(Timeout.Infinite);
@@ -483,7 +477,9 @@ internal static class HandleCloser
                             {
                                 IntPtr strPtr = Marshal.ReadIntPtr(nameBuf, IntPtr.Size == 8 ? 8 : 4);
                                 string name = Marshal.PtrToStringUni(strPtr, len / 2);
-                                if (name != null && (name.Contains("ROBLOX_singletonEvent") || name.Contains("ROBLOX_singletonMutex")))
+                                // ONLY close ROBLOX_singletonEvent handles. NEVER close ROBLOX_singletonMutex
+                                // in running Roblox processes -- closing the mutex causes instant crash/exit.
+                                if (name != null && name.Contains("ROBLOX_singletonEvent") && !name.Contains("Mutex"))
                                 {
                                     IntPtr dummy;
                                     DuplicateHandle(srcProc, entry.HandleValue, IntPtr.Zero, out dummy, 0, false, DUPLICATE_CLOSE_SOURCE);
